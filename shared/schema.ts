@@ -42,7 +42,7 @@ export const userRoles = pgTable("user_roles", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   user_id: uuid("user_id").references(() => profiles.id, { onDelete: 'cascade' }),
   role: appRoleEnum("role").default('member'),
-  assigned_at: timestamptz("assigned_at").defaultNow(),
+  assigned_at: timestamp("assigned_at").defaultNow(),
   assigned_by: uuid("assigned_by").references(() => profiles.id),
 });
 
@@ -56,11 +56,11 @@ export const invites = pgTable("invites", {
   invite_type: text("invite_type"),
   max_uses: integer("max_uses"),
   current_uses: integer("current_uses").default(0),
-  expires_at: timestamptz("expires_at"),
-  used_at: timestamptz("used_at"),
+  expires_at: timestamp("expires_at"),
+  used_at: timestamp("used_at"),
   notes: text("notes"),
   metadata: jsonb("metadata"),
-  created_at: timestamptz("created_at").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Events table
@@ -69,8 +69,8 @@ export const events = pgTable("events", {
   title: text("title").notNull(),
   description: text("description"),
   location: text("location"),
-  start_time: timestamptz("start_time").notNull(),
-  end_time: timestamptz("end_time"),
+  start_time: timestamp("start_time").notNull(),
+  end_time: timestamp("end_time"),
   max_capacity: integer("max_capacity"),
   current_capacity: integer("current_capacity").default(0),
   price_cents: integer("price_cents").default(0),
@@ -79,7 +79,7 @@ export const events = pgTable("events", {
   image_url: text("image_url"),
   status: eventStatusEnum("status").default('upcoming'),
   qr_code_token: text("qr_code_token"),
-  qr_code_generated_at: timestamptz("qr_code_generated_at"),
+  qr_code_generated_at: timestamp("qr_code_generated_at"),
   qr_code_generated_by: uuid("qr_code_generated_by"),
   created_by: uuid("created_by").references(() => profiles.id, { onDelete: 'set null' }),
   created_at: timestamp("created_at").defaultNow(),
@@ -95,7 +95,7 @@ export const eventRegistrations = pgTable("event_registrations", {
   stripe_session_id: text("stripe_session_id"),
   loyalty_points_used: integer("loyalty_points_used"),
   payment_status: paymentStatusEnum("payment_status").default('pending'),
-  registered_at: timestamptz("registered_at").defaultNow(),
+  registered_at: timestamp("registered_at").defaultNow(),
 });
 
 // Event attendance table
@@ -103,10 +103,10 @@ export const eventAttendance = pgTable("event_attendance", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   event_id: uuid("event_id").references(() => events.id, { onDelete: 'cascade' }),
   user_id: uuid("user_id").references(() => profiles.id, { onDelete: 'cascade' }),
-  attended_at: timestamptz("attended_at").defaultNow(),
+  attended_at: timestamp("attended_at").defaultNow(),
   points_awarded: integer("points_awarded"),
   verified_by: uuid("verified_by"),
-  created_at: timestamptz("created_at").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Challenges table
@@ -138,17 +138,17 @@ export const challengeParticipations = pgTable("challenge_participations", {
   challenge_id: uuid("challenge_id").references(() => challenges.id, { onDelete: 'cascade' }),
   user_id: uuid("user_id").references(() => profiles.id, { onDelete: 'cascade' }),
   completed: boolean("completed").default(false),
-  completion_date: timestamptz("completion_date"),
+  completion_date: timestamp("completion_date"),
   progress_data: jsonb("progress_data"),
-  joined_at: timestamptz("joined_at").defaultNow(),
+  joined_at: timestamp("joined_at").defaultNow(),
 });
 
 // Challenge cycles table
 export const challengeCycles = pgTable("challenge_cycles", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   parent_challenge_id: uuid("parent_challenge_id").references(() => challenges.id, { onDelete: 'cascade' }),
-  cycle_start: timestamptz("cycle_start").notNull(),
-  cycle_end: timestamptz("cycle_end").notNull(),
+  cycle_start: timestamp("cycle_start").notNull(),
+  cycle_end: timestamp("cycle_end").notNull(),
   status: text("status").default('active'),
   winner_user_id: uuid("winner_user_id"),
   runner_up_user_id: uuid("runner_up_user_id"),
@@ -163,7 +163,7 @@ export const walkingLeaderboards = pgTable("walking_leaderboards", {
   user_id: uuid("user_id").references(() => profiles.id, { onDelete: 'cascade' }),
   total_steps: integer("total_steps").default(0),
   daily_steps: jsonb("daily_steps"),
-  last_updated: timestamptz("last_updated").defaultNow(),
+  last_updated: timestamp("last_updated").defaultNow(),
   is_validated: boolean("is_validated").default(false),
 });
 
@@ -174,7 +174,7 @@ export const socialPosts = pgTable("social_posts", {
   content: text("content"),
   image_urls: text("image_urls").array(),
   is_story: boolean("is_story").default(false),
-  expires_at: timestamptz("expires_at"),
+  expires_at: timestamp("expires_at"),
   likes_count: integer("likes_count").default(0),
   comments_count: integer("comments_count").default(0),
   status: postStatusEnum("status").default('active'),
@@ -187,7 +187,7 @@ export const postLikes = pgTable("post_likes", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   post_id: uuid("post_id").references(() => socialPosts.id, { onDelete: 'cascade' }),
   user_id: uuid("user_id").references(() => profiles.id, { onDelete: 'cascade' }),
-  created_at: timestamptz("created_at").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Post comments table
@@ -210,9 +210,9 @@ export const loyaltyTransactions = pgTable("loyalty_transactions", {
   reference_id: uuid("reference_id"),
   reference_type: text("reference_type"),
   source_category: text("source_category"),
-  expires_at: timestamptz("expires_at"),
+  expires_at: timestamp("expires_at"),
   metadata: jsonb("metadata"),
-  created_at: timestamptz("created_at").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Direct messages table
@@ -223,7 +223,7 @@ export const directMessages = pgTable("direct_messages", {
   content: text("content").notNull(),
   message_type: text("message_type").default('text'),
   media_url: text("media_url"),
-  read_at: timestamptz("read_at"),
+  read_at: timestamp("read_at"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
