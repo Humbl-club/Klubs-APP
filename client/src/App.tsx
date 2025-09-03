@@ -109,6 +109,10 @@ const Settings = lazy(() =>
   import('./pages/Settings').then(module => ({ default: module.default }))
 );
 
+const MyRegistrations = lazy(() =>
+  import('./pages/MyRegistrations').then(module => ({ default: module.default }))
+);
+
 const Admin = lazy(() => 
   import('./pages/Admin').then(module => ({ default: module.default }))
 );
@@ -256,6 +260,11 @@ const App = () => {
                         <Route path="/messages" element={
                           <ProtectedRoute>
                             <Layout><Messages /></Layout>
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/my/registrations" element={
+                          <ProtectedRoute>
+                            <Layout><MyRegistrations /></Layout>
                           </ProtectedRoute>
                         } />
                         <Route path="/admin" element={

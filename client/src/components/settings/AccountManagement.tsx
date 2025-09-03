@@ -111,30 +111,20 @@ export const AccountManagement: React.FC = () => {
 
   const handleAccountDeletion = async () => {
     if (deleteConfirmation !== 'DELETE') {
-      toast({
-        title: "Error",
-        description: "Please type 'DELETE' to confirm account deletion",
-        variant: "destructive"
-      });
+      toast({ title: 'Error', description: "Please type 'DELETE' to confirm account deletion", variant: 'destructive' });
       return;
     }
-
     setLoading(true);
     try {
-      // Note: This would typically call an edge function to handle account deletion
-      // For now, we'll show a placeholder
-      toast({
-        title: "Account Deletion Requested",
-        description: "Your account deletion request has been submitted. You'll receive an email confirmation.",
-      });
-
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) throw error;
+      toast({ title: 'Account deleted', description: 'Your account has been deleted.' });
       setDeleteConfirmation('');
+      // Optional: redirect to home or sign out
+      await supabase.auth.signOut();
+      window.location.href = '/';
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete account",
-        variant: "destructive"
-      });
+      toast({ title: 'Error', description: error.message || 'Failed to delete account', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -143,17 +133,23 @@ export const AccountManagement: React.FC = () => {
   const handleDataExport = async () => {
     setLoading(true);
     try {
-      // This would typically call an edge function to generate data export
-      toast({
-        title: "Data Export Requested",
-        description: "Your data export will be emailed to you within 24 hours",
+      const { data, error } = await supabase.functions.invoke('export-user-data', {
+        // no body needed
       });
+      if (error) throw error;
+      const jsonStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'girlsclub-export.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Export ready', description: 'Download started.' });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to request data export",
-        variant: "destructive"
-      });
+      toast({ title: 'Error', description: 'Failed to export data', variant: 'destructive' });
     } finally {
       setLoading(false);
     }

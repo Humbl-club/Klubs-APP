@@ -11,6 +11,7 @@ struct RootView: View {
                 MainTabs()
             }
         }
+        .onAppear { NotificationManager.shared.requestAuthorization() }
     }
 }
 
@@ -21,15 +22,21 @@ struct MainTabs: View {
             EventsListView()
                 .tabItem { Label("Events", systemImage: "calendar") }
 
+            MyRegistrationsView()
+                .tabItem { Label("My", systemImage: "checkmark.circle") }
+
             if session.isOrgAdmin {
-                ConnectPanel()
+                OrgHomeView()
                     .tabItem { Label("Org", systemImage: "building.2") }
             }
 
             if session.isSuperAdmin {
-                AdminPlaceholder()
+                AdminOverviewView()
                     .tabItem { Label("Admin", systemImage: "shield") }
             }
+
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gearshape") }
         }
     }
 }
@@ -47,3 +54,6 @@ struct AdminPlaceholder: View {
     }
 }
 
+#Preview {
+    RootView()
+}

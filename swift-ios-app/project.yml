@@ -15,6 +15,7 @@ targets:
     platform: iOS
     sources:
       - path: GirlsClubiOS
+    entitlements: GirlsClubiOS/Supporting/GirlsClubiOS.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.girlsclub.ios

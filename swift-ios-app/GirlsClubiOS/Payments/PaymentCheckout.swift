@@ -1,5 +1,6 @@
 import SwiftUI
 import StripePaymentSheet
+import UIKit
 
 final class PaymentController: ObservableObject {
     @Published var paymentSheet: PaymentSheet?
@@ -34,31 +35,52 @@ final class PaymentController: ObservableObject {
 struct PaymentCheckout: View {
     let eventId: String
     @StateObject private var controller = PaymentController()
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack {
             if let e = controller.lastError { Text(e).foregroundColor(.red) }
         }
         .onAppear { Task { await controller.prepare(eventId: eventId) } }
-        .sheet(isPresented: $controller.presenting) {
-            if let sheet = controller.paymentSheet {
-                PaymentSheetWrapper(sheet: sheet)
-            }
+        .sheet(isPresented: $controller.presenting) { sheetContent }
+        .onReceive(NotificationCenter.default.publisher(for: .paymentSucceeded)) { _ in dismiss() }
+        .onReceive(NotificationCenter.default.publisher(for: .paymentCancelled)) { _ in dismiss() }
+        .onReceive(NotificationCenter.default.publisher(for: .paymentFailed)) { _ in dismiss() }
+    }
+
+    @ViewBuilder
+    var sheetContent: some View {
+        if let sheet = controller.paymentSheet {
+            PaymentSheetWrapper(sheet: sheet, eventId: eventId)
         }
     }
 }
 
+extension Notification.Name {
+    static let paymentSucceeded = Notification.Name("PaymentSucceeded")
+    static let paymentCancelled = Notification.Name("PaymentCancelled")
+    static let paymentFailed = Notification.Name("PaymentFailed")
+}
+
 struct PaymentSheetWrapper: UIViewControllerRepresentable {
     let sheet: PaymentSheet
+    let eventId: String
     func makeUIViewController(context: Context) -> UIViewController {
         let vc = UIViewController()
         DispatchQueue.main.async {
             sheet.present(from: vc) { result in
-                // Handle result; webhook will finalize registration
+                switch result {
+                case .completed:
+                    NotificationCenter.default.post(name: .paymentSucceeded, object: nil, userInfo: ["eventId": eventId])
+                case .canceled:
+                    NotificationCenter.default.post(name: .paymentCancelled, object: nil, userInfo: ["eventId": eventId])
+                case .failed(let error):
+                    NotificationCenter.default.post(name: .paymentFailed, object: nil, userInfo: ["eventId": eventId, "error": error.localizedDescription])
+                }
+                vc.presentingViewController?.dismiss(animated: true)
             }
         }
         return vc
     }
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
-

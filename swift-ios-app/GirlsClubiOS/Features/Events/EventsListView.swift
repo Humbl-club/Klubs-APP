@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct Event: Decodable, Identifiable {
     let id: String
@@ -15,6 +16,9 @@ struct EventsListView: View {
     @State private var loading = true
     @State private var error: String?
     @StateObject private var loyalty = LoyaltyStore()
+    @ObservedObject var router = DeepLinkRouter.shared
+    @State private var toastMessage: String?
+    @State private var registeredEventIds: Set<String> = []
 
     var body: some View {
         NavigationView {
@@ -50,6 +54,9 @@ struct EventsListView: View {
                                         VStack(alignment: .leading, spacing: GCSpacing.sm) {
                                             HStack {
                                                 GCBadge(text: isUpcoming(e) ? "Upcoming" : "Past", tint: isUpcoming(e) ? GCColors.primary : GCColors.mutedText)
+                                                if registeredEventIds.contains(e.id) {
+                                                    GCBadge(text: "Registered", tint: GCColors.success)
+                                                }
                                                 Spacer()
                                             }
                                             NavigationLink(destination: EventDetailView(event: e)) {
@@ -80,13 +87,21 @@ struct EventsListView: View {
                                 GCButton(title: "Register", variant: .primary, fullWidth: true) {
                                     presentPayment(for: e)
                                 }
+                                .disabled(registeredEventIds.contains(e.id))
                             } else if let points = e.loyalty_points_price, points > 0 {
                                 GCButton(title: "Use Points (\(points))", variant: .primary, fullWidth: true) {
                                     Task { await pointsFlow(for: e) }
                                 }
                                 .disabled(loyalty.availablePoints < (e.loyalty_points_price ?? Int.max))
                             } else {
-                                GCButton(title: "Register", variant: .primary, fullWidth: true) {}
+                                if registeredEventIds.contains(e.id) {
+                                    GCButton(title: "Registered", variant: .glass, fullWidth: true) {}
+                                        .disabled(true)
+                                } else {
+                                    GCButton(title: "Register", variant: .primary, fullWidth: true) {
+                                        Task { await registerForFree(eventId: e.id) }
+                                    }
+                                }
                             }
                         }.padding(.top, GCSpacing.sm)
                                         }
@@ -101,9 +116,43 @@ struct EventsListView: View {
             }
             .navigationBarHidden(true)
         }
+        .gcToast(message: $toastMessage)
         .task {
             await loadEvents()
             await loyalty.refresh()
+            await loadRegistrations()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .paymentSucceeded)) { note in
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            if let id = note.userInfo?["eventId"] as? String, let ev = events.first(where: { $0.id == id }) {
+                withAnimation { self.registeredEventIds.insert(id) }
+                let f = ISO8601DateFormatter()
+                if let start = f.date(from: ev.start_time) {
+                    NotificationManager.shared.scheduleEventReminder(eventId: ev.id, title: ev.title, start: start)
+                }
+            }
+            withAnimation { toastMessage = "Payment successful" }
+            Task { await loadEvents() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .paymentCancelled)) { _ in
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            withAnimation { toastMessage = "Payment canceled" }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .paymentFailed)) { note in
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            let err = (note.userInfo?["error"] as? String) ?? "Payment failed"
+            withAnimation { toastMessage = err }
+        }
+        .onChange(of: toastMessage) { value in
+            guard value != nil else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation { toastMessage = nil }
+            }
+        }
+        .onChange(of: router.eventId) { eid in
+            guard let id = eid, let ev = events.first(where: { $0.id == id }) else { return }
+            presentEventDetail(ev)
+            router.eventId = nil
         }
     }
 
@@ -140,25 +189,94 @@ struct EventsListView: View {
     func isUpcoming(_ e: Event) -> Bool { isoDate(e.start_time) > Date() }
     func dateString(_ s: String) -> String {
         DateFormatter.localizedString(from: isoDate(s), dateStyle: .medium, timeStyle: .short)
-    
+    }
 
     func presentPayment(for e: Event) {
         let vc = UIHostingController(rootView: PaymentCheckout(eventId: e.id))
-        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?
-            .rootViewController?
-            .present(vc, animated: true)
+        UIHelpers.present(vc)
     }
 
     func presentCreate() {
         let vc = UIHostingController(rootView: EventCreateView())
-        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?
-            .rootViewController?
-            .present(vc, animated: true)
+        UIHelpers.present(vc)
+    }
+
+    func presentEventDetail(_ e: Event) {
+        let vc = UIHostingController(rootView: EventDetailView(event: e))
+        UIHelpers.present(vc)
     }
 
     func pointsFlow(for e: Event) async {
         let ok = await loyalty.redeemPoints(for: e.id)
-        if !ok { self.error = loyalty.lastError }
+        if ok {
+            await MainActor.run {
+                self.registeredEventIds.insert(e.id)
+                self.toastMessage = "Registered using points"
+            }
+            let f = ISO8601DateFormatter()
+            if let start = f.date(from: e.start_time) {
+                NotificationManager.shared.scheduleEventReminder(eventId: e.id, title: e.title, start: start)
+            }
+            await loadEvents()
+        } else {
+            self.error = loyalty.lastError
+        }
+    }
+
+    func registerForFree(eventId: String) async {
+        do {
+            let client = SupabaseClientProvider.shared
+            let user = try await client.auth.session.user
+            var url = AppConfig.supabaseURL
+            url.appendPathComponent("rest/v1/rpc/register_for_event")
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.setValue(AppConfig.supabaseAnonKey, forHTTPHeaderField: "apikey")
+            if let token = try? await client.auth.session.accessToken {
+                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            let body: [String: Any] = [
+                "event_id_param": eventId,
+                "user_id_param": user.id,
+                "payment_method_param": NSNull(),
+                "loyalty_points_used_param": 0
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let msg = String(data: data, encoding: .utf8) ?? ""
+                throw NSError(domain: "register", code: (resp as? HTTPURLResponse)?.statusCode ?? -1, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+            // Haptic + toast + schedule local reminder
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            await MainActor.run { self.toastMessage = "Registered for event" }
+            await MainActor.run { self.registeredEventIds.insert(eventId) }
+            if let ev = self.events.first(where: { $0.id == eventId }) {
+                let f = ISO8601DateFormatter()
+                if let start = f.date(from: ev.start_time) {
+                    NotificationManager.shared.scheduleEventReminder(eventId: ev.id, title: ev.title, start: start)
+                }
+            }
+            await loadEvents()
+        } catch {
+            await MainActor.run { self.error = error.localizedDescription }
+        }
+    }
+
+    func loadRegistrations() async {
+        do {
+            let client = SupabaseClientProvider.shared
+            let user = try await client.auth.session.user
+            let resp = try await client.database
+                .from("event_registrations")
+                .select("event_id")
+                .eq(column: "user_id", value: user.id)
+                .execute()
+            struct Row: Decodable { let event_id: String }
+            let rows = try resp.decoded([Row].self)
+            await MainActor.run { self.registeredEventIds = Set(rows.map { $0.event_id }) }
+        } catch { /* ignore */ }
     }
 
 }

@@ -21,6 +21,7 @@ import {
   Zap,
   MessageSquare
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -209,31 +210,52 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ searchTerm
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-gray-900 border-white/10">
-                        <DropdownMenuLabel className="text-white/60">Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator className="bg-white/10" />
-                        <DropdownMenuItem className="text-white hover:bg-white/10">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        {org.is_active ? (
-                          <DropdownMenuItem 
-                            className="text-orange-400 hover:bg-orange-500/10"
-                            onClick={() => suspendOrganization(org.id)}
-                          >
-                            <Ban className="w-4 h-4 mr-2" />
-                            Suspend
+                        <DropdownMenuContent align="end" className="bg-gray-900 border-white/10">
+                          <DropdownMenuLabel className="text-white/60">Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuItem className="text-white hover:bg-white/10">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
                           </DropdownMenuItem>
-                        ) : (
+                          {org.is_active ? (
+                            <DropdownMenuItem 
+                              className="text-orange-400 hover:bg-orange-500/10"
+                              onClick={() => suspendOrganization(org.id)}
+                            >
+                              <Ban className="w-4 h-4 mr-2" />
+                              Suspend
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem 
+                              className="text-green-400 hover:bg-green-500/10"
+                              onClick={() => activateOrganization(org.id)}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Activate
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator className="bg-white/10" />
                           <DropdownMenuItem 
-                            className="text-green-400 hover:bg-green-500/10"
-                            onClick={() => activateOrganization(org.id)}
+                            className="text-red-400 hover:bg-red-500/10"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const confirmText = window.prompt(`Type PURGE to permanently delete ${org.name}`);
+                              if (confirmText !== 'PURGE') return;
+                              try {
+                                const { error } = await supabase.functions.invoke('purge-organization', { body: { organizationId: org.id, confirm: 'PURGE' } });
+                                if (error) throw error;
+                                // Optimistic UI: hide card
+                                setSelectedOrg(null);
+                              } catch (err) {
+                                console.error('Purge failed', err);
+                                alert('Purge failed: ' + (err as any)?.message || 'Unknown error');
+                              }
+                            }}
                           >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Activate
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            Purge (Danger)
                           </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
+                        </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
                 </CardHeader>

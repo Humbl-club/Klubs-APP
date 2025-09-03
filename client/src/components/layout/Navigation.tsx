@@ -19,7 +19,8 @@ import {
   MessageCircle,
   QrCode,
   Plus,
-  Building2
+  Building2,
+  CheckCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -64,6 +65,7 @@ export const Navigation: React.FC<NavigationProps> = ({ profile }) => {
 
   const secondaryNavItems = [
     { href: '/messages', icon: MessageCircle, label: 'Messages' },
+    { href: '/my/registrations', icon: CheckCircle, label: 'My Events' },
   ];
 
   if (isAdmin) {

@@ -16,7 +16,11 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "supabase:deploy": "bash scripts/deploy-functions.sh",
+    "supabase:check": "tsx scripts/check-supabase.ts",
+    "supabase:health": "tsx scripts/health-check.ts",
+    "supabase:cors": "tsx scripts/verify-cors.ts"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.3",

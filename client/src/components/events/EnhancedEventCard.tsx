@@ -61,6 +61,7 @@ interface EnhancedEventCardProps {
   onViewDetails?: (eventId: string) => void;
   onSave?: (eventId: string, saved: boolean) => void;
   onShare?: (eventId: string) => void;
+  onUnregister?: (eventId: string) => void;
   variant?: 'default' | 'compact' | 'featured';
   className?: string;
 }
@@ -71,6 +72,7 @@ export const EnhancedEventCard = memo(({
   onViewDetails,
   onSave,
   onShare,
+  onUnregister,
   variant = 'default',
   className
 }: EnhancedEventCardProps) => {
@@ -195,6 +197,63 @@ export const EnhancedEventCard = memo(({
       </div>
     );
   }, [event.attendees]);
+
+  const formatDateForGCal = (iso: string) => {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const y = d.getUTCFullYear();
+    const m = pad(d.getUTCMonth() + 1);
+    const day = pad(d.getUTCDate());
+    const h = pad(d.getUTCHours());
+    const min = pad(d.getUTCMinutes());
+    const s = pad(d.getUTCSeconds());
+    return `${y}${m}${day}T${h}${min}${s}Z`;
+  };
+
+  const openGoogleCalendar = useCallback(() => {
+    const start = formatDateForGCal(event.start_time);
+    const end = event.end_time ? formatDateForGCal(event.end_time) : start;
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: event.title,
+      dates: `${start}/${end}`,
+      details: event.description || '',
+      location: event.location || ''
+    });
+    const url = `https://calendar.google.com/calendar/render?${params.toString()}`;
+    window.open(url, '_blank');
+  }, [event.title, event.description, event.location, event.start_time, event.end_time]);
+
+  const downloadICS = useCallback(() => {
+    const dt = (iso: string) => iso.replace(/[-:]/g, '').split('.')[0].replace(/\+\d{2}:?\d{2}$/,'Z');
+    const uid = `${event.id}@girlsclub`;
+    const body = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//GirlsClub//Events//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${dt(new Date().toISOString())}`,
+      `DTSTART:${dt(event.start_time)}`,
+      `DTEND:${dt(event.end_time || event.start_time)}`,
+      `SUMMARY:${(event.title || '').replace(/\n/g, ' ')}`,
+      `DESCRIPTION:${(event.description || '').replace(/\n/g, ' ')}`,
+      `LOCATION:${(event.location || '').replace(/\n/g, ' ')}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+    const blob = new Blob([body], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${event.title || 'event'}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [event.id, event.title, event.description, event.location, event.start_time, event.end_time]);
 
   return (
     <div className={cardClasses} onClick={() => { if (onViewDetails) onViewDetails(event.id); else setOpen(true); }}>
@@ -444,6 +503,13 @@ export const EnhancedEventCard = memo(({
                 <QrCode className="w-3 h-3 mr-1" />
                 Scan QR
               </Button>
+              <Button
+                variant="destructive"
+                onClick={(e) => { e.stopPropagation(); onUnregister?.(event.id); }}
+                className={cn('flex-1 text-xs h-8')}
+              >
+                Unregister
+              </Button>
               <div className={cn(
                 'flex-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-md flex items-center justify-center font-medium text-xs h-8'
               )}>
@@ -487,6 +553,13 @@ export const EnhancedEventCard = memo(({
                 {event.description}
               </DialogDescription>
             )}
+            {event.is_registered && (
+              <div className="mt-2">
+                <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                  ✓ Registered
+                </Badge>
+              </div>
+            )}
           </DialogHeader>
 
           <div className="p-4 space-y-3 text-sm">
@@ -517,14 +590,23 @@ export const EnhancedEventCard = memo(({
 
           <div className="sticky bottom-0 inset-x-0">
             <SafeAreaBottom className="bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-t border-border p-3">
-              {!event.is_registered && event.isUpcoming ? (
-                <Button size="lg" className="w-full" onClick={() => onRegister?.(event.id)} data-testid="details-register-button">
-                  <Users className="w-4 h-4 mr-2" />
-                  Register
+              <div className="flex gap-2">
+                {!event.is_registered && event.isUpcoming ? (
+                  <Button size="lg" className="flex-1" onClick={() => onRegister?.(event.id)} data-testid="details-register-button">
+                    <Users className="w-4 h-4 mr-2" />
+                    Register
+                  </Button>
+                ) : (
+                  <div className="flex-1 text-center text-sm text-muted-foreground self-center">You're registered</div>
+                )}
+                <Button variant="outline" onClick={openGoogleCalendar}>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Add
                 </Button>
-              ) : (
-                <div className="text-center text-sm text-muted-foreground">You're registered</div>
-              )}
+                <Button variant="ghost" onClick={downloadICS}>
+                  .ics
+                </Button>
+              </div>
             </SafeAreaBottom>
           </div>
         </DialogContent>

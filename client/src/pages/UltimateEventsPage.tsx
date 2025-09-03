@@ -50,6 +50,7 @@ const UltimateEventsPage = memo(() => {
   });
   
   const [events, setEvents] = useState<any[]>([]);
+  const [registeredEventIds, setRegisteredEventIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('upcoming');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,9 +144,14 @@ const UltimateEventsPage = memo(() => {
         status,
         limit: 20
       });
-      
-      console.log(`✅ Loaded ${Array.isArray(eventsData) ? eventsData.length : 0} events:`, eventsData);
-      setEvents(Array.isArray(eventsData) ? eventsData : []);
+      const list = Array.isArray(eventsData) ? eventsData : [];
+      // Ensure registered state is consistent with server registrations
+      const merged = list.map((e: any) => ({
+        ...e,
+        is_registered: Boolean(e.is_registered) || registeredEventIds.has(e.id)
+      }));
+      console.log(`✅ Loaded ${merged.length} events`, merged);
+      setEvents(merged);
       
       performance.mark('loadEvents-end');
       performance.measure('loadEvents-duration', 'loadEvents-start', 'loadEvents-end');
@@ -161,7 +167,22 @@ const UltimateEventsPage = memo(() => {
     } finally {
       setLoading(false);
     }
-  }, [getEvents, user?.id]);
+  }, [getEvents, user?.id, registeredEventIds]);
+
+  const loadRegisteredEventIds = useCallback(async () => {
+    try {
+      if (!user?.id) return;
+      const { data, error } = await supabase
+        .from('event_registrations')
+        .select('event_id')
+        .eq('user_id', user.id);
+      if (error) throw error;
+      const ids = new Set((data || []).map((r: any) => r.event_id));
+      setRegisteredEventIds(ids);
+    } catch (err) {
+      // Non-fatal; keep UI going
+    }
+  }, [user?.id]);
 
   // Enhanced event registration with payment flow for paid events
   const handleRegister = useCallback(async (eventId: string) => {
@@ -181,6 +202,7 @@ const UltimateEventsPage = memo(() => {
           ? { ...event, is_registered: true }
           : event
       ));
+      setRegisteredEventIds(prev => new Set(prev).add(eventId));
 
       await registerForEvent(eventId, user.id);
       
@@ -195,6 +217,11 @@ const UltimateEventsPage = memo(() => {
           ? { ...event, is_registered: false }
           : event
       ));
+      setRegisteredEventIds(prev => {
+        const copy = new Set(prev);
+        copy.delete(eventId);
+        return copy;
+      });
       
       console.error('Registration error:', err);
       toast({
@@ -204,6 +231,28 @@ const UltimateEventsPage = memo(() => {
       });
     }
   }, [events, registerForEvent, user]);
+
+  // Unregister from event (free events only)
+  const handleUnregister = useCallback(async (eventId: string) => {
+    if (!user) return;
+    try {
+      // Optimistic update
+      setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, is_registered: false } : ev));
+      setRegisteredEventIds(prev => { const c = new Set(prev); c.delete(eventId); return c; });
+
+      const { error } = await supabase.rpc('unregister_from_event', {
+        event_id_param: eventId,
+        user_id_param: user.id,
+      });
+      if (error) throw error;
+      toast({ title: 'Unregistered', description: 'You have been unregistered from the event.' });
+    } catch (err) {
+      // Revert
+      setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, is_registered: true } : ev));
+      setRegisteredEventIds(prev => new Set(prev).add(eventId));
+      toast({ title: 'Failed to unregister', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
+    }
+  }, [user]);
 
   // Save/Unsave event functionality
   const handleSaveEvent = useCallback(async (eventId: string, saved: boolean) => {
@@ -369,6 +418,7 @@ const UltimateEventsPage = memo(() => {
     });
 
     const unsubscribeRegistered = eventBus.on('event:registered', () => {
+      loadRegisteredEventIds();
       loadEvents(activeTab);
     });
 
@@ -376,13 +426,14 @@ const UltimateEventsPage = memo(() => {
       unsubscribeCreated();
       unsubscribeRegistered();
     };
-  }, [loadEvents, activeTab]);
+  }, [loadEvents, loadRegisteredEventIds, activeTab]);
 
 
   // Initial load and tab changes
   useEffect(() => {
     loadEvents(activeTab);
-  }, [loadEvents, activeTab]);
+    loadRegisteredEventIds();
+  }, [loadEvents, loadRegisteredEventIds, activeTab]);
 
   // Handle Stripe Checkout return and verify payment
   useEffect(() => {
@@ -404,6 +455,7 @@ const UltimateEventsPage = memo(() => {
             toast({ title: 'Payment confirmed', description: 'You are registered for the event!' });
           }
 
+          await loadRegisteredEventIds();
           await loadEvents(activeTab);
         } catch (e) {
           toast({ title: 'Verification failed', description: 'Please refresh the page.', variant: 'destructive' });
@@ -415,7 +467,7 @@ const UltimateEventsPage = memo(() => {
         }
       })();
     }
-  }, [activeTab, loadEvents]);
+  }, [activeTab, loadEvents, loadRegisteredEventIds]);
 
   // Enhanced render event card with error boundaries
   const renderEventCard = useCallback((event: any, index: number) => (
@@ -433,6 +485,7 @@ const UltimateEventsPage = memo(() => {
         event={event}
         onRegister={handleRegister}
         onViewDetails={(id) => console.log('View details:', id)}
+        onUnregister={handleUnregister}
         onSave={handleSaveEvent}
         onShare={handleShareEvent}
         variant={viewMode === 'list' || isMobileOptimized ? 'compact' : 'default'}
@@ -571,6 +624,27 @@ const UltimateEventsPage = memo(() => {
               </Dialog>
             )}
           />
+          {isAdmin && (
+            <div className="mt-2">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const { data, error } = await supabase.functions.invoke('create-calendar-feed-token');
+                    if (error) throw error;
+                    const url = data?.ics_url as string;
+                    await navigator.clipboard.writeText(url);
+                    toast({ title: 'ICS link copied', description: 'Paste into your calendar app.' });
+                  } catch (e: any) {
+                    toast({ title: 'Failed to create ICS link', description: e?.message || 'Try again', variant: 'destructive' })
+                  }
+                }}
+              >
+                Create ICS Link
+              </Button>
+            </div>
+          )}
+          
         </PageSection>
 
         {/* Stripe Connect Banner for Admins */}
