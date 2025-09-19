@@ -90,6 +90,7 @@ serve(async (req) => {
         .insert({
           event_id: eventId,
           user_id: user.id,
+          organization_id: event.organization_id || null,
           payment_method: "loyalty_points",
           loyalty_points_used: event.loyalty_points_price,
           payment_status: "completed"
@@ -106,8 +107,14 @@ serve(async (req) => {
           points: event.loyalty_points_price,
           description: `Event registration: ${event.title}`,
           reference_type: "event_registration",
-          reference_id: eventId
+          reference_id: eventId,
+          organization_id: event.organization_id || null
         });
+
+      // Increment event capacity after successful points registration
+      try {
+        await supabaseClient.rpc("increment_event_capacity", { event_id: eventId });
+      } catch (_) {}
 
       return new Response(JSON.stringify({ success: true, paymentMethod: "points" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

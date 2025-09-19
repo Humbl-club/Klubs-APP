@@ -20,6 +20,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Switch } from '../ui/switch';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { supabase } from '../../integrations/supabase/client';
 import { useMobileFirst } from '../../hooks/useMobileFirst';
@@ -39,7 +40,7 @@ export const OrganizationSettings: React.FC = () => {
     slug: '',
     subscription_tier: 'free',
     max_members: 50,
-    settings: {}
+    settings: {} as any
   });
 
   // Stripe connect state
@@ -98,7 +99,7 @@ export const OrganizationSettings: React.FC = () => {
         .from('events')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', currentOrganization.id)
-        .gte('end_date', new Date().toISOString());
+        .in('status', ['upcoming', 'ongoing']);
 
       // Get total posts count
       const { count: postCount } = await supabase
@@ -122,6 +123,10 @@ export const OrganizationSettings: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setError(null);
     setSuccess(null);
+  };
+
+  const setSettings = (updater: (s: any) => any) => {
+    setFormData(prev => ({ ...prev, settings: updater(prev.settings || {}) }));
   };
 
   const handleSave = async () => {
@@ -384,6 +389,40 @@ export const OrganizationSettings: React.FC = () => {
           </div>
 
           <Separator />
+
+          {/* Invites Auto-Expiration */}
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+            <div className="space-y-2">
+              <Label>Auto-Expire Invite Codes</Label>
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={Boolean((formData.settings?.invites?.auto_expire_days || 0) > 0)}
+                  onCheckedChange={(checked) => {
+                    setSettings((s) => {
+                      const days = checked ? (s?.invites?.auto_expire_days || 7) : 0
+                      return { ...s, invites: { ...(s?.invites||{}), auto_expire_days: days } }
+                    })
+                  }}
+                />
+                <span className="text-sm text-gray-600">Enable automatic expiry for new invite codes</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="inviteExpireDays">Default Expiry (days)</Label>
+              <Input
+                id="inviteExpireDays"
+                type="number"
+                min={0}
+                value={formData.settings?.invites?.auto_expire_days ?? 0}
+                onChange={(e) => {
+                  const val = Math.max(0, parseInt(e.target.value || '0'))
+                  setSettings((s) => ({ ...s, invites: { ...(s?.invites||{}), auto_expire_days: val } }))
+                }}
+              />
+              <p className="text-xs text-gray-500">0 disables auto-expiration. Applies when creating new codes.</p>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-2">
             <Button

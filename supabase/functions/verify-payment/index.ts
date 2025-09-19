@@ -59,12 +59,20 @@ serve(async (req) => {
         .single();
 
       if (!existingReg) {
+        // Fetch event to determine organization context
+        const { data: evt } = await supabaseClient
+          .from("events")
+          .select("id, organization_id, title")
+          .eq("id", eventId)
+          .maybeSingle();
+
         // Create event registration
         const { error: regError } = await supabaseClient
           .from("event_registrations")
           .insert({
             event_id: eventId,
             user_id: userId,
+            organization_id: (evt as any)?.organization_id || null,
             payment_method: "stripe",
             stripe_session_id: sessionId,
             payment_status: "completed"
@@ -89,7 +97,8 @@ serve(async (req) => {
               points: pointsEarned,
               description: "Event registration bonus",
               reference_type: "event_registration",
-              reference_id: eventId
+              reference_id: eventId,
+              organization_id: (evt as any)?.organization_id || null
             });
         }
 

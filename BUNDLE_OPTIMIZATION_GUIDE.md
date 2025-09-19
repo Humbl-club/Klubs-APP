@@ -131,13 +131,8 @@ const loadCharts = async () => {
 const QRScanner = lazy(() => import('./components/QRScanner'));
 ```
 
-### 9. **Remove Drizzle ORM** (Save ~50KB)
-Since it's configured but never used:
-```bash
-npm uninstall drizzle-orm drizzle-kit drizzle-zod @neondatabase/serverless
-rm server/db.ts
-rm shared/schema.ts
-```
+### 9. **Trim Dev‑Only Tooling**
+Audit and remove any unused dev‑only toolchains to reduce install time and transitive deps.
 
 ### 10. **Use Production React Build**
 Ensure production mode:
@@ -155,10 +150,10 @@ NODE_ENV=production npm run build
 
 ## 🚀 Quick Implementation
 
-### Phase 1 (Quick Wins - 1 hour)
+### Phase 1 (Quick Wins - 1 hour) 
 1. Delete unused mobile pages
 2. Remove unused packages
-3. Remove Drizzle ORM
+3. Remove any unused dev‑only tooling
 
 **Expected Savings**: ~300KB
 

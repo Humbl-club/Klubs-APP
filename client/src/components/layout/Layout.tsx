@@ -4,13 +4,12 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { useViewport } from '@/hooks/use-mobile';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { Navigation } from './Navigation';
-import { MobileGirlsClubHeader } from './MobileGirlsClubHeader';
+import { SimpleNavigation } from './SimpleNavigation';
 import { SidebarTrigger, SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar/AppSidebar';
 import { MobileLoading } from '@/components/ui/mobile-loading';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import EditorialMasthead from '@/components/layout/EditorialMasthead';
 import { iPadLayout as IPadLayout } from '@/components/ipad';
 import { UserThemeController } from '@/components/theme/UserThemeController';
 
@@ -67,7 +66,7 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
   }
 
   const getLayoutPadding = () => {
-    if (isMobile) return `pb-24 ${showHeader ? 'pt-0' : 'pt-4'}`; // Spacer handles header height when shown
+    if (isMobile) return 'pb-24 pt-4'; // No header, just bottom navigation
     if (isTablet) return 'pt-4'; // Sidebar handles left spacing
     return 'pt-4'; // Sidebar handles left spacing
   };
@@ -91,9 +90,7 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
       <a href="#main-content" className="sr-only focus:not-sr-only fixed top-2 left-2 z-50 px-3 py-2 rounded-md bg-background text-foreground ring-2 ring-primary">Skip to content</a>
       {isMobile ? (
         <>
-          {showHeader && <MobileGirlsClubHeader />}
-          {showHeader && <div aria-hidden className="w-full" style={{ height: 'var(--mobile-header-height)' }} />}
-          <Navigation profile={profile} />
+          <SimpleNavigation />
           <main id="main-content" className={cn(
             `responsive-container max-w-7xl mx-auto ${getMainPadding()}`,
             "px-[env(safe-area-inset-left,0px)]",
@@ -114,7 +111,7 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
           <div className="flex w-full">
             <AppSidebar />
             <div className="flex-1 min-w-0">
-              <EditorialMasthead />
+              {/* Removed EditorialMasthead */}
               <main id="main-content" className={cn(
                 `responsive-container max-w-7xl mx-auto ${getMainPadding()} animate-fade-in`,
                 "px-[env(safe-area-inset-left,0px)]",

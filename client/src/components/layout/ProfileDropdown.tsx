@@ -23,9 +23,13 @@ import {
   QrCode,
   MessageCircle,
   Crown,
+  Building2,
+  UserPlus,
+  ArrowLeftRight,
   type LucideIcon
 } from 'lucide-react';
 import { useGestures } from '@/hooks/useGestures';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 interface ProfileDropdownProps {
   profile?: {
@@ -44,7 +48,8 @@ interface MenuItem {
 }
 
 export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ profile }) => {
-  const { signOut, isAdmin } = useAuth();
+  const { signOut, isAdmin, isSuperAdmin, isOrganizationAdmin } = useAuth();
+  const { currentOrganization } = useOrganization();
   const location = useLocation();
   const haptics = useHapticFeedback();
   const { isMobile, isTablet, isDesktop } = useViewport();
@@ -123,6 +128,33 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ profile }) => 
     },
   ];
 
+  // Add organization admin items
+  if (isOrganizationAdmin) {
+    menuItems.push(
+      { 
+        href: '/admin/organization', 
+        icon: Building2, 
+        label: 'Organization Settings', 
+        description: 'Manage your organization',
+        group: 'admin'
+      },
+      { 
+        href: '/admin/invites', 
+        icon: UserPlus, 
+        label: 'Invite Members', 
+        description: 'Grow your community',
+        group: 'admin'
+      },
+      {
+        href: '/organization/switch',
+        icon: ArrowLeftRight,
+        label: 'Switch Organization',
+        description: 'Change active organization',
+        group: 'admin'
+      }
+    );
+  }
+  
   // Add admin items if user is admin
   if (isAdmin) {
     menuItems.push({ 
@@ -130,6 +162,17 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ profile }) => 
       icon: Shield, 
       label: 'Admin Panel', 
       description: 'Manage the community',
+      group: 'admin'
+    });
+  }
+  
+  // Add super admin for platform owner
+  if (isSuperAdmin) {
+    menuItems.push({ 
+      href: '/super-admin', 
+      icon: Crown, 
+      label: 'Platform Admin', 
+      description: 'Platform administration',
       group: 'admin'
     });
   }
@@ -314,12 +357,14 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ profile }) => 
                     <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className="text-sm text-muted-foreground mb-1">
                   Welcome back, {getFirstName(profile?.full_name)}!
                 </p>
-                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
-                  Your wellness journey continues
-                </Badge>
+                {currentOrganization && (
+                  <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                    {currentOrganization.name}
+                  </Badge>
+                )}
               </div>
             </div>
           </DropdownMenuLabel>

@@ -10,7 +10,8 @@ body { @apply bg-background text-foreground font-sans font-medium antialiased; }
 @layer base {
   :root {
     /* Base Editorial Colors - Sophisticated neutrals */
-    --background: 0 0% 99%;
+    /* Warmer off-white background (Alo-inspired cream) */
+    --background: 45 25% 97%;
     --foreground: 210 11% 15%;
     --ash: 215 6% 42%;
     
@@ -56,30 +57,30 @@ body { @apply bg-background text-foreground font-sans font-medium antialiased; }
     --popover: 0 0% 99%;
     --popover-foreground: 210 11% 15%;
 
-    /* Primary - Pastel Sage */
+    /* Primary - Pastel Sage (kept calm/minimal) */
     --primary: 140 22% 34%;
     --primary-foreground: 0 0% 98%;
 
     /* Sophisticated Secondary - Soft Mist */
-    --secondary: 200 25% 96%;
+    --secondary: 200 25% 97%;
     --secondary-foreground: 210 11% 15%;
 
     /* Muted - Gentle neutrals */
-    --muted: 200 20% 95%;
+    --muted: 45 18% 95%;
     --muted-foreground: 210 8% 45%;
 
-    /* Accent - Misty Blue */
-    --accent: 200 30% 92%;
-    --accent-foreground: 210 11% 15%;
+    /* Accent - Soft Lavender for highlights */
+    --accent: 258 65% 86%;
+    --accent-foreground: 258 22% 28%;
 
     /* Error handling */
     --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 98%;
 
     /* Interactive elements */
-    --border: 210 11% 88%;
-    --input: 210 11% 88%;
-    --ring: 210 15% 25%;
+    --border: 210 12% 90%;
+    --input: 210 12% 90%;
+    --ring: 210 16% 25%;
 
     --radius: 0.75rem;
     /* Extended tokens for premium UI */
@@ -180,6 +181,24 @@ body { @apply bg-background text-foreground font-sans font-medium antialiased; }
 }
 
 @layer components {
+  /* Glass Buttons (token-driven) */
+  .button-glass {
+    @apply inline-flex items-center justify-center rounded-lg border transition-all duration-200;
+    background: hsl(var(--glass-medium));
+    border-color: hsl(var(--glass-border));
+    box-shadow: 0 6px 20px -8px hsl(var(--glass-shadow));
+    backdrop-filter: var(--glass-backdrop);
+  }
+  .button-glass:hover {
+    background: hsl(var(--glass-hover));
+    border-color: hsl(var(--glass-border));
+    box-shadow: 0 10px 28px -10px hsl(var(--glass-shadow));
+  }
+  .glass-button {
+    @apply inline-flex items-center justify-center rounded-lg border border-border/50 bg-background/80 backdrop-blur-sm shadow-sm transition-all;
+  }
+  .glass-button:hover { @apply bg-background/90 shadow-md; }
+
   /* Enhanced Glass Navigation System */
   .glass-nav {
     @apply border shadow-md;
@@ -686,4 +705,3 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     --ring: 210 15% 25%;
   }
 }
-

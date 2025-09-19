@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MobileToggle } from '@/components/ui/mobile-toggle';
-import { Bell, Shield, Heart, Users, Palette, Save, MessageCircle, Lock, Search, ChevronRight, ArrowLeft, User } from 'lucide-react';
+import { Bell, Shield, Heart, Users, Palette, Save, MessageCircle, Lock, Search, ChevronRight, ArrowLeft, User, Settings as SettingsIcon, Gift } from 'lucide-react';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { MobileFeatureToggles } from '@/components/admin/MobileFeatureToggles';
+import { LoyaltyConnect } from '@/components/loyalty/LoyaltyConnect';
 
 // Define the UserSettings type locally to match the hook
 interface UserSettings {
@@ -64,9 +68,12 @@ import { ThemeGallery } from '@/components/theme/ThemeGallery';
 
 const Settings: React.FC = () => {
   const { settings, loading, saving, updateSetting } = useUserSettings();
+  const navigate = useNavigate();
+  const { section } = useParams();
   const { isMobile, isTablet, spacing, padding, fontSize, formLayout, containerClass } = useMobileOptimization();
   const feedback = useHapticFeedback();
   const [searchQuery, setSearchQuery] = useState('');
+  const { isAdmin } = useOrganization();
   const [activeMobileSection, setActiveMobileSection] = useState<string | null>(null);
   
 
@@ -82,58 +89,51 @@ const Settings: React.FC = () => {
     localStorage.setItem('density', density);
   }, [density]);
 
-  // Settings sections for mobile - stable reference
-  const settingSections = useMemo(() => [
-    {
-      id: 'privacy',
-      title: 'Privacy & Security',
-      icon: Shield,
-      description: 'Control your privacy settings',
-      keywords: ['profile', 'visibility', 'security', 'private', 'public', 'messages', 'groups']
+  // Sync selected section from route (/settings/:section)
+  useEffect(() => {
+    if (section) setActiveMobileSection(section as string);
+    else setActiveMobileSection(null);
+  }, [section]);
+
+  // Settings sections for mobile - simplified, purpose-driven
+  const settingSections = useMemo(() => {
+    const base = [
+      {
+      id: 'account',
+      title: 'Account',
+      icon: User,
+      description: 'Email, password, export/delete',
+      keywords: ['password', 'email', 'delete', 'export', 'security', 'account']
     },
     {
       id: 'notifications',
       title: 'Notifications',
       icon: Bell,
-      description: 'Manage how you receive notifications',
-      keywords: ['push', 'email', 'sms', 'alerts', 'reminders', 'events', 'challenges', 'social']
+      description: 'Push and email preferences',
+      keywords: ['push', 'email', 'alerts', 'reminders']
     },
     {
-      id: 'account',
-      title: 'Account Management',
-      icon: User,
-      description: 'Password, email, and account settings',
-      keywords: ['password', 'email', 'delete', 'export', 'security', 'account']
-    },
-    {
-      id: 'messaging',
-      title: 'Messaging',
-      icon: MessageCircle,
-      description: 'Communication preferences',
-      keywords: ['messages', 'chat', 'encryption', 'read receipts', 'preview']
-    },
-    {
-      id: 'wellness',
-      title: 'Wellness & Health',
-      icon: Heart,
-      description: 'Health tracking settings',
-      keywords: ['activity', 'steps', 'water', 'mindfulness', 'sleep', 'tracking', 'health']
-    },
-    {
-      id: 'social',
-      title: 'Social Features',
-      icon: Users,
-      description: 'Social interaction settings',
-      keywords: ['follow', 'friends', 'content', 'stories', 'activity', 'suggestions']
+      id: 'privacy',
+      title: 'Privacy',
+      icon: Shield,
+      description: 'Profile visibility and messaging',
+      keywords: ['profile', 'visibility', 'messages', 'groups']
     },
     {
       id: 'appearance',
       title: 'Appearance',
       icon: Palette,
-      description: 'Customize your interface',
-      keywords: ['theme', 'dark', 'light', 'font', 'contrast', 'animations', 'glass']
+      description: 'Theme, font size, contrast',
+      keywords: ['theme', 'dark', 'light', 'font', 'contrast', 'animations']
     }
-  ], []);
+    ] as Array<{id:string,title:string,icon:any,description:string,keywords:string[]}>
+    if (isAdmin) {
+      base.unshift({ id: 'features', title: 'Features', icon: SettingsIcon, description: 'Toggle Events, Social, Challenges, Commerce', keywords: ['features','commerce','events','social','challenges'] })
+    }
+    // Always expose Loyalty under Settings if org has a loyalty integration; we detect lazily at render time
+    base.push({ id: 'loyalty', title: 'Loyalty', icon: Gift, description: 'Link your store loyalty account and sync points', keywords: ['loyalty','points','store'] })
+    return base
+  }, [isAdmin]);
 
   // Filter sections based on search query
   const filteredSections = useMemo(() => {
@@ -149,7 +149,22 @@ const Settings: React.FC = () => {
 
   // Render mobile section content - stable reference with useCallback
   const renderMobileSectionContent = useCallback((sectionId: string) => {
+    // Return loading state if settings are not loaded
+    if (!settings) {
+      return (
+        <Card className="glass-card-enhanced p-8 text-center">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-muted rounded-lg w-48 mx-auto"></div>
+            <div className="h-4 bg-muted rounded w-64 mx-auto"></div>
+          </div>
+          <p className="text-muted-foreground mt-4">Loading settings...</p>
+        </Card>
+      );
+    }
+    
     switch (sectionId) {
+      case 'features':
+        return <MobileFeatureToggles />;
       case 'privacy':
         return <PrivacySettings />;
 
@@ -324,6 +339,8 @@ const Settings: React.FC = () => {
             </CardContent>
           </Card>
         );
+      case 'loyalty':
+        return <LoyaltyConnect />;
 
       case 'messaging':
         return (
@@ -487,7 +504,7 @@ const Settings: React.FC = () => {
         )}
       </div>
 
-      {loading ? (
+      {loading || !settings ? (
         <div className="glass-card-enhanced p-8 text-center">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-muted rounded-lg w-48 mx-auto"></div>
@@ -505,7 +522,7 @@ const Settings: React.FC = () => {
               <button
                 onClick={() => {
                   feedback.tap();
-                  setActiveMobileSection(null);
+                  navigate('/settings');
                 }}
                 className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -533,7 +550,7 @@ const Settings: React.FC = () => {
                     className="p-0"
                     onTap={() => {
                       feedback.tap();
-                      setActiveMobileSection(section.id);
+                      navigate(`/settings/${section.id}`);
                     }}
                   >
                     <Card className="border-0 shadow-none cursor-pointer hover:bg-muted/30 transition-colors">
@@ -560,9 +577,9 @@ const Settings: React.FC = () => {
           )
       ) : (
         // Desktop tabs layout
-        <Tabs defaultValue="privacy" className="space-y-6">
+        <Tabs defaultValue="account" className="space-y-6">
           <div className="w-full overflow-x-auto">
-            <TabsList className="inline-flex w-max min-w-full sm:grid sm:grid-cols-7 gap-1 p-1">
+            <TabsList className="inline-flex w-max min-w-full sm:grid sm:grid-cols-4 gap-1 p-1">
               <TabsTrigger value="privacy" className="flex items-center gap-2 flex-shrink-0">
                 <Shield className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Privacy</span>
@@ -575,27 +592,14 @@ const Settings: React.FC = () => {
                 <User className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Account</span>
               </TabsTrigger>
-              <TabsTrigger value="messaging" className="flex items-center gap-2 flex-shrink-0">
-                <MessageCircle className="w-4 h-4" />
-                <span className="text-xs sm:text-sm">Messaging</span>
-              </TabsTrigger>
-              <TabsTrigger value="wellness" className="flex items-center gap-2 flex-shrink-0">
-                <Heart className="w-4 h-4" />
-                <span className="text-xs sm:text-sm">Wellness</span>
-              </TabsTrigger>
-              <TabsTrigger value="social" className="flex items-center gap-2 flex-shrink-0">
-                <Users className="w-4 h-4" />
-                <span className="text-xs sm:text-sm">Social</span>
-              </TabsTrigger>
               <TabsTrigger value="appearance" className="flex items-center gap-2 flex-shrink-0">
                 <Palette className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Appearance</span>
               </TabsTrigger>
             </TabsList>
           </div>
-
-        <TabsContent value="privacy">
-          <PrivacySettings />
+        <TabsContent value="account">
+          <AccountManagement />
         </TabsContent>
 
         <TabsContent value="notifications">
@@ -604,197 +608,6 @@ const Settings: React.FC = () => {
 
         <TabsContent value="account">
           <AccountManagement />
-        </TabsContent>
-
-        <TabsContent value="messaging">
-          <Card className="glass-card-enhanced">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                Messaging & Communication
-              </CardTitle>
-              <CardDescription>
-                Control your messaging preferences and encryption settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="allowMessages">Allow Direct Messages</Label>
-                    <p className="text-sm text-muted-foreground">Enable direct messaging with other members</p>
-                  </div>
-                  <MobileToggle
-                    checked={settings.social.message_requests}
-                    onCheckedChange={(checked) => updateSetting('social', 'message_requests', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="messagePreview">Message Previews</Label>
-                    <p className="text-sm text-muted-foreground">Show message previews in notifications</p>
-                  </div>
-                  <MobileToggle
-                    checked={settings.notifications.social_interactions}
-                    onCheckedChange={(checked) => updateSetting('notifications', 'social_interactions', checked)}
-                  />
-                </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg border border-primary/20">
-                  <div className="flex items-start gap-3">
-                    <Lock className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-sm">End-to-End Encryption</h4>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        All messages are encrypted with client-side keys. Even administrators cannot read your conversations.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="wellness">
-          <Card className="glass-card-enhanced">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5" />
-                Wellness & Health
-              </CardTitle>
-              <CardDescription>
-                Manage your wellness tracking and reminders
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="activityReminders">Activity Reminders</Label>
-                  <MobileToggle
-                    checked={settings.wellness.activity_reminders}
-                    onCheckedChange={(checked) => updateSetting('wellness', 'activity_reminders', checked)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="dailySteps">Daily Step Goal</Label>
-                  <Input
-                    id="dailySteps"
-                    type="number"
-                    value={settings.wellness.daily_goal_steps}
-                    onChange={(e) => updateSetting('wellness', 'daily_goal_steps', parseInt(e.target.value) || 8000)}
-                    min="1000"
-                    max="50000"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="waterReminders">Water Reminders</Label>
-                  <MobileToggle
-                    checked={settings.wellness.water_reminders}
-                    onCheckedChange={(checked) => updateSetting('wellness', 'water_reminders', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="mindfulnessReminders">Mindfulness Reminders</Label>
-                  <MobileToggle
-                    checked={settings.wellness.mindfulness_reminders}
-                    onCheckedChange={(checked) => updateSetting('wellness', 'mindfulness_reminders', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="sleepTracking">Sleep Tracking</Label>
-                  <MobileToggle
-                    checked={settings.wellness.sleep_tracking}
-                    onCheckedChange={(checked) => updateSetting('wellness', 'sleep_tracking', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="healthDataSharing">Health Data Sharing</Label>
-                  <MobileToggle
-                    checked={settings.wellness.health_data_sharing}
-                    onCheckedChange={(checked) => updateSetting('wellness', 'health_data_sharing', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="social">
-          <Card className="glass-card-enhanced">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Social Features
-              </CardTitle>
-              <CardDescription>
-                Configure your social interaction preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="autoFollowFriends">Auto-Follow Event Attendees</Label>
-                  <MobileToggle
-                    checked={settings.social.auto_follow_friends}
-                    onCheckedChange={(checked) => updateSetting('social', 'auto_follow_friends', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="contentSuggestions">Content Suggestions</Label>
-                  <MobileToggle
-                    checked={settings.social.content_suggestions}
-                    onCheckedChange={(checked) => updateSetting('social', 'content_suggestions', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="storySharing">Story Sharing</Label>
-                  <MobileToggle
-                    checked={settings.social.story_sharing}
-                    onCheckedChange={(checked) => updateSetting('social', 'story_sharing', checked)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="activityVisibility">Activity Visibility</Label>
-                  <Select value={settings.social.activity_visibility} onValueChange={(value) => updateSetting('social', 'activity_visibility', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="public">Public</SelectItem>
-                      <SelectItem value="friends">Friends Only</SelectItem>
-                      <SelectItem value="private">Private</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="messageRequests">Message Requests</Label>
-                  <MobileToggle
-                    checked={settings.social.message_requests}
-                    onCheckedChange={(checked) => updateSetting('social', 'message_requests', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="groupInvitations">Group Invitations</Label>
-                  <MobileToggle
-                    checked={settings.social.group_invitations}
-                    onCheckedChange={(checked) => updateSetting('social', 'group_invitations', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="appearance">

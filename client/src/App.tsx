@@ -93,6 +93,10 @@ const Events = lazy(() =>
   import('./pages/Events').then(module => ({ default: module.default }))
 );
 
+const EventDetail = lazy(() =>
+  import('./pages/EventDetail').then(module => ({ default: module.default }))
+);
+
 const Challenges = lazy(() => 
   import('./pages/Challenges').then(module => ({ default: module.default }))
 );
@@ -238,17 +242,22 @@ const App = () => {
                           </ProtectedRoute>
                         } />
                         <Route path="/social" element={
-                          <ProtectedRoute>
+                          <ProtectedRoute requireFeature="social">
                             <Layout><Social /></Layout>
                           </ProtectedRoute>
                         } />
                         <Route path="/events" element={
-                          <ProtectedRoute>
+                          <ProtectedRoute requireFeature="events">
                             <Layout><Events /></Layout>
                           </ProtectedRoute>
                         } />
+                        <Route path="/events/:id" element={
+                          <ProtectedRoute requireFeature="events">
+                            <Layout><EventDetail /></Layout>
+                          </ProtectedRoute>
+                        } />
                         <Route path="/challenges" element={
-                          <ProtectedRoute>
+                          <ProtectedRoute requireFeature="challenges">
                             <Layout><Challenges /></Layout>
                           </ProtectedRoute>
                         } />
@@ -258,7 +267,7 @@ const App = () => {
                           </ProtectedRoute>
                         } />
                         <Route path="/messages" element={
-                          <ProtectedRoute>
+                          <ProtectedRoute requireFeature="messaging">
                             <Layout><Messages /></Layout>
                           </ProtectedRoute>
                         } />
@@ -288,6 +297,11 @@ const App = () => {
                           </ProtectedRoute>
                         } />
                         <Route path="/settings" element={
+                          <ProtectedRoute>
+                            <Layout><Settings /></Layout>
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/settings/:section" element={
                           <ProtectedRoute>
                             <Layout><Settings /></Layout>
                           </ProtectedRoute>

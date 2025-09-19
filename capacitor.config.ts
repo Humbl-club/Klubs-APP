@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.girlsclub.platform',
+  appId: 'com.example.girlsclub', // Change this to your unique identifier
   appName: 'Girls Club Platform',
   webDir: 'dist/public',
   bundledWebRuntime: false,

@@ -42,13 +42,13 @@
   
   /* Enhanced Glass Cards */
   .card-primary {
-    @apply bg-background/95 backdrop-blur-lg border border-border/60 rounded-xl shadow-lg;
-    @apply transition-all duration-300 hover:shadow-xl hover:border-border/80;
+    @apply bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-md;
+    @apply transition-all duration-300 hover:shadow-lg hover:border-border/50;
   }
   
   .card-secondary {
-    @apply bg-background/80 backdrop-blur-md border border-border/40 rounded-lg shadow-md;
-    @apply transition-all duration-300 hover:shadow-lg hover:border-border/60;
+    @apply bg-background/85 backdrop-blur-md border border-border/30 rounded-lg shadow;
+    @apply transition-all duration-300 hover:shadow-md hover:border-border/45;
   }
   
   .card-glass {
@@ -59,8 +59,8 @@
   }
   
   .card-accent {
-    @apply bg-primary/5 border border-primary/20 rounded-xl shadow-lg;
-    @apply transition-all duration-300 hover:bg-primary/10 hover:border-primary/30;
+    @apply bg-primary/5 border border-primary/15 rounded-xl shadow-md;
+    @apply transition-all duration-300 hover:bg-primary/10 hover:border-primary/20;
   }
   
   /* Mobile-Optimized Stats Grid */

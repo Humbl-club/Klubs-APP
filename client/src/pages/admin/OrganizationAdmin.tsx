@@ -11,14 +11,21 @@ import {
   Users,
   AlertCircle
 } from 'lucide-react';
+import { Store } from 'lucide-react'
+import { Calendar as CalendarIcon } from 'lucide-react'
 import { OrganizationSettings } from '../../components/admin/OrganizationSettings';
 import { FeatureManagement } from '../../components/admin/FeatureManagement';
+import { MobileFeatureToggles } from '../../components/admin/MobileFeatureToggles';
 import BrandingCustomizationPlaceholder from '../../components/admin/BrandingCustomizationPlaceholder';
+import { ThemeEditor } from '../../components/admin/ThemeEditor';
 import { InviteCodeManager } from '../../components/admin/InviteCodeManager';
 import { ContentModerationDashboard } from '../../components/admin/ContentModerationDashboard';
+import { ICSTokenManager } from '../../components/admin/ICSTokenManager';
 import { OrganizationSwitcher } from '../../components/organization/OrganizationSwitcher';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMobileFirst } from '../../hooks/useMobileFirst';
+import { CommerceSettings } from '../../components/admin/CommerceSettings';
+import { LoyaltySettings } from '../../components/admin/LoyaltySettings';
 
 const OrganizationAdmin: React.FC = () => {
   const { isMobile } = useMobileFirst();
@@ -107,7 +114,7 @@ const OrganizationAdmin: React.FC = () => {
 
       {/* Main Admin Interface */}
       <Tabs defaultValue="settings" className="w-full">
-        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-6'} mb-8`}>
+        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-5' : 'grid-cols-9'} mb-8`}>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             {!isMobile && 'Settings'}
@@ -127,6 +134,11 @@ const OrganizationAdmin: React.FC = () => {
             <QrCode className="w-4 h-4" />
             {!isMobile && 'Invites'}
           </TabsTrigger>
+
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <CalendarIcon className="w-4 h-4" />
+            {!isMobile && 'Calendar'}
+          </TabsTrigger>
           
           <TabsTrigger value="moderation" className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
@@ -139,6 +151,14 @@ const OrganizationAdmin: React.FC = () => {
               Members
             </TabsTrigger>
           )}
+          <TabsTrigger value="commerce" className="flex items-center gap-2">
+            <Store className="w-4 h-4" />
+            {!isMobile && 'Commerce'}
+          </TabsTrigger>
+          <TabsTrigger value="loyalty" className="flex items-center gap-2">
+            <Store className="w-4 h-4" />
+            {!isMobile && 'Loyalty'}
+          </TabsTrigger>
         </TabsList>
 
         {/* Organization Settings */}
@@ -148,12 +168,12 @@ const OrganizationAdmin: React.FC = () => {
 
         {/* Feature Management */}
         <TabsContent value="features">
-          <FeatureManagement />
+          {isMobile ? <MobileFeatureToggles /> : <FeatureManagement />}
         </TabsContent>
 
         {/* Branding Customization */}
         <TabsContent value="branding">
-          <BrandingCustomizationPlaceholder />
+          <ThemeEditor />
         </TabsContent>
 
         {/* Invite Code Management */}
@@ -161,9 +181,20 @@ const OrganizationAdmin: React.FC = () => {
           <InviteCodeManager />
         </TabsContent>
 
+        {/* Calendar Feed Management */}
+        <TabsContent value="calendar">
+          <ICSTokenManager />
+        </TabsContent>
+
         {/* Content Moderation */}
         <TabsContent value="moderation">
           <ContentModerationDashboard />
+        </TabsContent>
+        <TabsContent value="commerce">
+          <CommerceSettings />
+        </TabsContent>
+        <TabsContent value="loyalty">
+          <LoyaltySettings />
         </TabsContent>
 
         {/* Members Management */}

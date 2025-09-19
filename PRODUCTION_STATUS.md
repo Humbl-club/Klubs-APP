@@ -1,11 +1,11 @@
 # Production Readiness & Feature Status
 
-This document summarizes where we are today, what remains to ship a reliable v1 for at least 10,000 users, and a concrete checklist to close the gaps. It covers Web (Vercel), iOS (SwiftUI), Supabase (DB, Functions), Observability, Security, and Scale.
+This document summarizes where we are today, what remains to ship a reliable v1 for at least 10,000 users, and a concrete checklist to close the gaps. It covers Web (Vercel), iOS (Capacitor), Supabase (DB, Functions), Observability, Security, and Scale.
 
 ## Overview
 - Architecture: Multi-tenant events + organizations + payments + loyalty + messaging/social.
 - Hosting: Web SPA on Vercel; Supabase for Auth/DB/Realtime/Storage/Edge‑Functions.
-- Native iOS: SwiftUI app with Supabase + Stripe PaymentSheet, feature‑aligned visuals (glass UI), multi‑tab shell.
+- iOS (Capacitor): PWA packaged as a native shell, with device capabilities (camera/notifications), Stripe Checkout/PaymentIntent supported via Edge Functions.
 
 ## Current Feature Coverage
 - Events
@@ -81,10 +81,10 @@ This document summarizes where we are today, what remains to ship a reliable v1 
 - Deploy functions (scripts/deploy-functions.sh)
 - Verify DB + RPCs (scripts/check-supabase.ts) and Storage/Env (scripts/health-check.ts)
 
-## iOS (Xcode)
-- Secrets (local): swift‑ios‑app/Config/Secrets.xcconfig with SUPABASE_URL, SUPABASE_ANON_KEY, STRIPE_PUBLISHABLE_KEY
-- Generate & open: `cd swift-ios-app && xcodegen generate && open GirlsClubiOS.xcodeproj`
-- Signing & Capabilities: set Team; optional Apple Pay merchant; camera permission set; Health keys present
+## iOS (Capacitor)
+- Open iOS (Capacitor): `npm run ios:open` (build + sync + open Xcode)
+- Signing & Capabilities: set Team; optional Apple Pay merchant; camera permission set
+- Environment comes from the built web bundle (Vite env): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, optional `VITE_STRIPE_PUBLIC_KEY`
 
 ## Scale & Performance (10,000+ users)
 - DB & RLS
@@ -142,7 +142,7 @@ This document summarizes where we are today, what remains to ship a reliable v1 
   - ICS token management (revoke/rotate) and public landing calendar
   - Insights for orgs: top events, conversion funnels, membership growth
 - Social & Wellness
-  - Native iOS Messaging in phase 2 (Realtime + compact UI)
+- Mobile messaging polish in phase 2 (Realtime + compact UI)
   - HealthKit step sync integrated with challenges + leaderboards
 - Reliability
   - Idempotency keys + retries in payments/verify functions
@@ -163,7 +163,7 @@ This document summarizes where we are today, what remains to ship a reliable v1 
   - [ ] Quick pass on messaging/social views under current RLS
 - iOS
   - [ ] Fill Secrets.xcconfig
-  - [ ] XcodeGen generate + open the project; set Signing Team
+- [ ] Xcode: open Capacitor iOS project (`npm run ios:open`) and set Signing Team
   - [ ] Run through flows (payments, calendar, ICS share, delete/export)
 - Scale & Observability
   - [ ] Index review + add missing hot‑path indexes

@@ -1,4 +1,5 @@
-import React, { Suspense, memo, useCallback, useState, useEffect, useMemo } from 'react';
+import React, { Suspense, memo, useCallback, useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useAdvancedMobileOptimization } from '@/hooks/useAdvancedMobileOptimization';
 import { useEnhancedEventService } from '@/services/domain/EnhancedEventService';
@@ -35,6 +36,7 @@ import { useProfileData } from '@/hooks/useProfileData';
 
 // Ultimate Events Page with enterprise architecture
 const UltimateEventsPage = memo(() => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { performanceMetrics, isMobileOptimized } = useAdvancedMobileOptimization();
   const { getEvents, createEvent, registerForEvent } = useEnhancedEventService();
@@ -51,6 +53,8 @@ const UltimateEventsPage = memo(() => {
   
   const [events, setEvents] = useState<any[]>([]);
   const [registeredEventIds, setRegisteredEventIds] = useState<Set<string>>(new Set());
+  const regIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => { regIdsRef.current = registeredEventIds }, [registeredEventIds]);
   const [activeTab, setActiveTab] = useState('upcoming');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +135,10 @@ const UltimateEventsPage = memo(() => {
   const { profile } = useProfileData(user?.id);
 
   // Load events with enhanced caching and monitoring
+  const inFlightRef = useRef(false)
   const loadEvents = useCallback(async (status = 'upcoming') => {
+    if (inFlightRef.current) return
+    inFlightRef.current = true
     performance.mark('loadEvents-start');
     console.log(`🔄 Loading events with status: ${status}, user: ${user?.id}`);
     
@@ -148,7 +155,8 @@ const UltimateEventsPage = memo(() => {
       // Ensure registered state is consistent with server registrations
       const merged = list.map((e: any) => ({
         ...e,
-        is_registered: Boolean(e.is_registered) || registeredEventIds.has(e.id)
+        // Use latest ref to avoid recreating the callback and causing reload loops
+        is_registered: Boolean(e.is_registered) || regIdsRef.current.has(e.id)
       }));
       console.log(`✅ Loaded ${merged.length} events`, merged);
       setEvents(merged);
@@ -166,8 +174,9 @@ const UltimateEventsPage = memo(() => {
       });
     } finally {
       setLoading(false);
+      inFlightRef.current = false
     }
-  }, [getEvents, user?.id, registeredEventIds]);
+  }, [getEvents, user?.id]);
 
   const loadRegisteredEventIds = useCallback(async () => {
     try {
@@ -311,6 +320,8 @@ const UltimateEventsPage = memo(() => {
         ...(endIso ? { end_time: endIso } : {}),
         price_cents: priceInput ? Math.round(parseFloat(priceInput) * 100) : null,
         max_capacity: typeof capacityInput === 'number' ? capacityInput : null,
+        // Ensure multi-tenant scoping on event creation
+        ...(currentOrganization?.id ? { organization_id: currentOrganization.id } : {}),
       };
 
       // Gate paid events on Stripe connect status
@@ -484,7 +495,7 @@ const UltimateEventsPage = memo(() => {
       <EnhancedEventCard
         event={event}
         onRegister={handleRegister}
-        onViewDetails={(id) => console.log('View details:', id)}
+        onViewDetails={(id) => navigate(`/events/${id}`)}
         onUnregister={handleUnregister}
         onSave={handleSaveEvent}
         onShare={handleShareEvent}
@@ -745,28 +756,29 @@ const UltimateEventsPage = memo(() => {
                   ))}
                 </div>
                ) : displayedEvents.length === 0 ? (
-                <EmptyState
-                  icon={searchQuery || activeFilters.length > 0 ? <Search className="w-full h-full" /> : <Calendar className="w-full h-full" />}
-                  title={searchQuery || activeFilters.length > 0 
-                    ? "No events match your search" 
-                    : `No ${activeTab} events found`}
-                  description={searchQuery || activeFilters.length > 0
-                    ? "Try adjusting your search criteria or filters to find events that match your interests."
-                    : "New exciting events are added regularly. Check back soon to discover amazing experiences!"}
-                  action={{
-                    label: searchQuery || activeFilters.length > 0 ? "Clear Filters" : "Explore All Events",
-                    onClick: () => {
-                      if (searchQuery || activeFilters.length > 0) {
-                        setSearchQuery('');
-                        setActiveFilters([]);
-                      } else {
-                        setActiveTab('all');
-                      }
-                    },
-                    variant: "default"
-                  }}
-                />
-                {isAdmin && (!orgStripeStatus?.charges_enabled || !orgStripeStatus?.payouts_enabled) && (
+                <>
+                  <EmptyState
+                    icon={searchQuery || activeFilters.length > 0 ? <Search className="w-full h-full" /> : <Calendar className="w-full h-full" />}
+                    title={searchQuery || activeFilters.length > 0 
+                      ? "No events match your search" 
+                      : `No ${activeTab} events found`}
+                    description={searchQuery || activeFilters.length > 0
+                      ? "Try adjusting your search criteria or filters to find events that match your interests."
+                      : "New exciting events are added regularly. Check back soon to discover amazing experiences!"}
+                    action={{
+                      label: searchQuery || activeFilters.length > 0 ? "Clear Filters" : "Explore All Events",
+                      onClick: () => {
+                        if (searchQuery || activeFilters.length > 0) {
+                          setSearchQuery('');
+                          setActiveFilters([]);
+                        } else {
+                          setActiveTab('all');
+                        }
+                      },
+                      variant: "default"
+                    }}
+                  />
+                  {isAdmin && (!orgStripeStatus?.charges_enabled || !orgStripeStatus?.payouts_enabled) && (
                   <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900 text-sm">
                     Want to host paid events? Connect your Stripe account to accept payments and receive payouts directly.
                     <div className="mt-2 flex gap-2">
@@ -776,6 +788,7 @@ const UltimateEventsPage = memo(() => {
                     </div>
                   </div>
                 )}
+                </>
               ) : (
                 <div className="mobile:space-y-3 sm:space-y-4">
                   {/* Mobile-first event list */}

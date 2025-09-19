@@ -97,7 +97,7 @@ export const DirectMessaging = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header with Connection Status */}
-      <div className="mb-4 p-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-lg border border-primary/20">
+      <div className="mb-4 p-4 glass-card-enhanced rounded-xl">
         <div className="flex items-center gap-3">
           <Shield className="w-5 h-5 text-primary" />
           <div className="flex-1">
@@ -121,7 +121,7 @@ export const DirectMessaging = () => {
           <div className="flex items-center gap-2">
             {(connectionStatus === 'offline' || retryCount > 0) && (
               <Button 
-                variant="outline" 
+                variant="glass" 
                 size="sm" 
                 onClick={retryConnection}
                 disabled={connectionStatus === 'offline'}
@@ -140,7 +140,7 @@ export const DirectMessaging = () => {
 
       <div className={`grid gap-4 flex-1 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} min-h-[500px]`}>
         {/* Conversations List */}
-        <Card className={`${isMobile ? (selectedThread ? 'hidden' : 'block') : 'col-span-1'}`}>
+        <Card className={`glass-card-enhanced ${isMobile ? (selectedThread ? 'hidden' : 'block') : 'col-span-1'}`}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -155,7 +155,7 @@ export const DirectMessaging = () => {
               
               <Dialog open={showNewMessageDialog} onOpenChange={setShowNewMessageDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="glass" size="sm">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
@@ -216,7 +216,7 @@ export const DirectMessaging = () => {
                 filteredThreads.map((thread) => (
                   <div
                     key={thread.id}
-                    className={`p-3 hover:bg-muted/50 cursor-pointer border-l-4 transition-colors ${
+                    className={`p-3 hover:bg-muted/40 cursor-pointer border-l-4 transition-colors ${
                       selectedThread === thread.id 
                         ? 'border-l-primary bg-muted/30' 
                         : 'border-l-transparent'
@@ -259,14 +259,14 @@ export const DirectMessaging = () => {
         </Card>
 
         {/* Messages Area */}
-        <Card className={`${isMobile ? (selectedThread ? 'block' : 'hidden') : 'col-span-2'}`}>
+        <Card className={`glass-card-enhanced ${isMobile ? (selectedThread ? 'block' : 'hidden') : 'col-span-2'}`}>
           {selectedThreadData ? (
             <>
               <CardHeader className="pb-3 border-b">
                 <div className="flex items-center gap-3">
                   {isMobile && (
                     <Button 
-                      variant="ghost" 
+                      variant="glass" 
                       size="sm" 
                       onClick={() => setSelectedThread(null)}
                       className="h-8 w-8 p-0"

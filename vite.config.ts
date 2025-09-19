@@ -4,6 +4,7 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
+  base: "./", // Use relative paths for Capacitor
   plugins: [
     react(),
     runtimeErrorOverlay(),
@@ -17,8 +18,13 @@ export default defineConfig({
       : []),
   ],
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
     'process.env.PUBLIC_URL': JSON.stringify(process.env.PUBLIC_URL || ''),
+    // Hardcode these for Capacitor build since .env files don't work the same way
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://ynqdddwponrqwhtqfepi.supabase.co'),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlucWRkZHdwb25ycXdodHFmZXBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDYwOTMsImV4cCI6MjA2NzU4MjA5M30.LoH2muJ_kTSk3y_fBlxEq3m9q5LTQaMaWBSFyh4JDzQ'),
+    'import.meta.env.VITE_GOOGLE_MAPS_API_KEY': JSON.stringify(''),
+    'import.meta.env.VITE_STRIPE_PUBLIC_KEY': JSON.stringify('pk_test_12345'),
   },
   resolve: {
     alias: {

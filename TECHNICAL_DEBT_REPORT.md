@@ -17,19 +17,19 @@ The application is a **functional Supabase-based platform** with significant tec
 - **Action:** DELETE entire `/server` directory
 - **Risk:** None - frontend uses Supabase directly
 
-### 2. **Drizzle ORM - Completely Unused**
-- **Files:** `/shared/schema.ts`, `/drizzle.config.ts`, migrations folder
+### 2. **Legacy ORM Artifacts (Unused)**
+- **Files:** removed (legacy prototypes)
 - **Issue:** Simplified schema not connected to anything
 - **Impact:** Confusion about actual database structure
-- **Action:** DELETE all Drizzle-related files
-- **Risk:** None - Supabase is the actual ORM
+- **Action:** Cleaned up legacy ORM artifacts; Supabase remains the single source of truth
+- **Risk:** None - Supabase is the data layer
 
 ### 3. **Unused NPM Packages (20+ packages)**
 ```json
 // Backend packages to remove
 "express", "express-session", "passport", "passport-local",
-"drizzle-orm", "drizzle-zod", "drizzle-kit", 
-"postgres", "@neondatabase/serverless",
+ 
+"postgres",
 "connect-pg-simple", "memorystore", "wouter",
 // Plus all @types for above packages
 ```
@@ -154,7 +154,7 @@ EMAIL_PROVIDER_API_KEY=xxx      # Required for email notifications
 
 ### **Phase 1: Critical Cleanup (1 day)**
 1. Delete `/server` directory
-2. Remove Drizzle files
+2. Remove legacy schema files
 3. Uninstall unused packages
 4. Delete unused mobile pages
 5. Remove duplicate layouts
@@ -183,12 +183,12 @@ EMAIL_PROVIDER_API_KEY=xxx      # Required for email notifications
 
 ```bash
 # 1. Remove unused packages
-npm uninstall express express-session passport passport-local drizzle-orm drizzle-zod drizzle-kit postgres @neondatabase/serverless connect-pg-simple memorystore wouter @types/express @types/express-session @types/passport @types/passport-local @types/pg @types/connect-pg-simple
+npm uninstall express express-session passport passport-local postgres connect-pg-simple memorystore wouter @types/express @types/express-session @types/passport @types/passport-local @types/pg @types/connect-pg-simple
 
 # 2. Delete dead directories
 rm -rf server/
 rm -rf shared/
-rm drizzle.config.ts
+ 
 
 # 3. Delete unused mobile pages
 rm client/src/pages/Mobile*.tsx
@@ -250,4 +250,4 @@ The Express server only serves static files in production. All business logic ru
 
 ## Conclusion
 
-The application is **functional and feature-complete** via Supabase, but carries significant technical debt from an incomplete architectural migration. The cleanup is straightforward with minimal risk since most dead code is completely disconnected. Priority should be removing the Express backend, Drizzle ORM, and consolidating duplicate services. This will transform a confusing hybrid architecture into a clean Supabase-first application.
+The application is **functional and feature-complete** via Supabase. Removing the Express backend and consolidating duplicate services transforms a confusing hybrid into a clean Supabase‑first application.

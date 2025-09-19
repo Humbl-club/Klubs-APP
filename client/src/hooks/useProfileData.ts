@@ -56,6 +56,62 @@ export const useProfileData = (userId: string | undefined) => {
     }
   }, [userId, currentOrganization?.id]);
 
+  // Realtime subscriptions for points and profile updates
+  useEffect(() => {
+    if (!userId || !currentOrganization?.id) return;
+
+    // Subscribe to loyalty_transactions inserts for this user (org-filtered in handler)
+    const channel = supabase
+      .channel(`rt-points-${userId}-${currentOrganization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'loyalty_transactions',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          try {
+            const row = payload.new as any;
+            // Only apply updates for current organization context
+            if (row && (!row.organization_id || row.organization_id === currentOrganization.id)) {
+              // Prepend transaction for immediacy
+              setLoyaltyTransactions((prev) => [row, ...prev]);
+              // Refresh profile points to ensure accuracy (earned/redeemed math is centralized in DB triggers)
+              const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle();
+              if (!error && data) setProfile(data as any);
+            }
+          } catch (e) {
+            // Non-fatal
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          // Keep profile (including points) in sync in case of external adjustments
+          setProfile((prev) => ({ ...(prev || {}), ...(row || {}) } as any));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, currentOrganization?.id]);
+
   const fetchAllData = async () => {
     try {
       await Promise.all([

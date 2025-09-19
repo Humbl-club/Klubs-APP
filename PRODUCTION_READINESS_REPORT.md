@@ -85,7 +85,7 @@ The application is **PRODUCTION-READY** with minor TypeScript warnings that don'
 
 ### Unused Code: **~5% of codebase**
 - 7 mobile pages never imported (2,061 lines)
-- Drizzle ORM configured but disconnected
+ 
 - 1 Edge Function deployed but unused
 
 ## 📊 PERFORMANCE METRICS
@@ -129,7 +129,7 @@ The application is **PRODUCTION-READY** with minor TypeScript warnings that don'
 
 ### iOS Capabilities Verified:
 - ✅ **Safe Area Support**: Notches and home indicators
-- ✅ **Haptic Feedback**: Native iOS engine integration
+- ✅ **Haptic Feedback**: iOS haptic feedback via Capacitor
 - ✅ **Motion Tracking**: Step counting via accelerometer
 - ✅ **Health Data**: HealthKit integration ready
 - ✅ **Camera Access**: QR code scanning functional

@@ -55,11 +55,8 @@ else → Desktop layout
 
 ## 🟡 ACTUAL Technical Debt (Carefully Verified)
 
-### 1. **Drizzle ORM - Genuinely Unused** ✅
-- **Files:** `/shared/schema.ts` (only contains basic users table)
-- **Verification:** No imports in client code, only imported by unused storage.ts
-- **Safe to Remove:** YES - Supabase is the actual database layer
-- **Action:** Can delete Drizzle files and packages
+### 1. **Legacy ORM Artifacts (Removed)** ✅
+Legacy ORM samples/config were deleted; Supabase remains the single source of truth for data.
 
 ### 2. **Wouter Package - Confirmed Unused** ✅
 - **Package:** `wouter` in package.json
@@ -76,8 +73,8 @@ else → Desktop layout
 ### 4. **Unused Database Packages** ✅
 ```json
 // Can safely remove:
-"drizzle-orm", "drizzle-zod", "drizzle-kit",
-"postgres", "@neondatabase/serverless",
+ 
+"postgres",
 "connect-pg-simple", "memorystore"
 ```
 
@@ -137,12 +134,11 @@ React SPA with Adaptive Rendering
 
 ### **Packages to Remove (Double-Checked):**
 ```bash
-npm uninstall drizzle-orm drizzle-zod drizzle-kit postgres @neondatabase/serverless connect-pg-simple memorystore wouter passport passport-local @types/passport @types/passport-local @types/connect-pg-simple
+npm uninstall postgres connect-pg-simple memorystore wouter passport passport-local @types/passport @types/passport-local @types/connect-pg-simple
 ```
 
 ### **Files to Remove:**
-- `/shared/schema.ts` - Only has unused users table
-- `/drizzle.config.ts` - Drizzle config
+ 
 - `/server/storage.ts` - In-memory storage not used
 - **BUT NOT** `/server/routes.ts` - Keep for future API additions
 
@@ -152,7 +148,7 @@ npm uninstall drizzle-orm drizzle-zod drizzle-kit postgres @neondatabase/serverl
 
 ### **Phase 1: Minimal Cleanup (Safe)**
 1. Remove only verified unused packages (above list)
-2. Delete Drizzle configuration files
+2. Delete legacy configuration files
 3. Keep ALL mobile components
 4. Keep Express server structure
 
@@ -193,7 +189,7 @@ npm uninstall drizzle-orm drizzle-zod drizzle-kit postgres @neondatabase/serverl
 - ❌ Consolidate layouts (each serves specific device type)
 
 ### **SAFE TO:**
-- ✅ Remove Drizzle ORM and related packages
+- ✅ Remove unused legacy ORM artifacts (already removed)
 - ✅ Remove Wouter routing library
 - ✅ Remove unused auth packages (passport, etc.)
 - ✅ Clean up unused type definitions
@@ -225,11 +221,7 @@ APPLE_PUSH_CERT=xxx                 # For iOS notifications
 
 ```bash
 # Only remove truly unused packages:
-npm uninstall drizzle-orm drizzle-zod drizzle-kit postgres @neondatabase/serverless wouter
-
-# Remove only Drizzle files:
-rm shared/schema.ts
-rm drizzle.config.ts
+npm uninstall wouter
 
 # DO NOT remove server/ directory
 # DO NOT remove mobile components
@@ -241,7 +233,7 @@ rm drizzle.config.ts
 
 The application is a **well-architected iOS PWA** with intentional platform-specific optimizations. What initially looked like technical debt is actually a sophisticated responsive design system. The only real debt is:
 
-1. **Unused ORM packages** (Drizzle)
+1. **Legacy ORM packages** (removed)
 2. **Redundant routing library** (Wouter)
 3. **Some service code duplication** (could be refactored)
 

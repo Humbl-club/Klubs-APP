@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
   requireSuperAdmin?: boolean;
   requireAuth?: boolean;
   requireOrganization?: boolean;
+  requireFeature?: string;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
@@ -16,10 +17,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
   requireSuperAdmin = false,
   requireAuth = true,
-  requireOrganization = true
+  requireOrganization = true,
+  requireFeature
 }) => {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
-  const { currentOrganization, loading: orgLoading } = useOrganization();
+  const { currentOrganization, loading: orgLoading, isFeatureEnabled } = useOrganization();
 
   if (loading || (requireOrganization && orgLoading)) {
     return (
@@ -46,6 +48,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requireSuperAdmin && !isSuperAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireFeature && currentOrganization && !isFeatureEnabled(requireFeature)) {
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -219,22 +219,88 @@ export const OrganizationOnboarding: React.FC = () => {
 
       if (selectedPlan === 'free' || freeUnlimited) {
         const tier = freeUnlimited && selectedPlan === 'enterprise' ? 'enterprise' : 'free';
-        const { data, error } = await supabase.functions.invoke('create-org-free', {
-          body: {
-            name: formData.name,
-            slug: formData.slug,
-            description: formData.description,
-            orgType: formData.orgType,
-            primaryColor: formData.primaryColor,
-            logoUrl: formData.logoUrl,
-            tagline: formData.tagline,
-            selectedFeatures: formData.selectedFeatures,
-            plan: tier,
+        
+        // Check if we're in Capacitor environment
+        const isCapacitor = window.location.protocol === 'capacitor:';
+        
+        if (isCapacitor) {
+          // Direct database approach for Capacitor (bypass Edge function)
+          // Create organization
+          const { data: org, error: orgError } = await supabase
+            .from('organizations')
+            .insert({
+              name: formData.name,
+              slug: formData.slug,
+              description: formData.description,
+              subscription_tier: tier,
+              subscription_status: 'active',
+            })
+            .select()
+            .single();
+          
+          if (orgError) throw orgError;
+          
+          // Add user as owner
+          const { error: memberError } = await supabase
+            .from('organization_members')
+            .insert({
+              organization_id: org.id,
+              user_id: user.id,
+              role: 'owner',
+            });
+          
+          if (memberError) throw memberError;
+          
+          // Create theme
+          const { error: themeError } = await supabase
+            .from('organization_themes')
+            .insert({
+              organization_id: org.id,
+              primary_color: formData.primaryColor,
+            });
+          
+          if (themeError) throw themeError;
+          
+          // Add selected features
+          if (formData.selectedFeatures.length > 0) {
+            const featureInserts = formData.selectedFeatures.map((featureKey) => ({
+              organization_id: org.id,
+              feature_key: featureKey,
+              enabled: true,
+            }));
+
+            const { error: featuresError } = await supabase
+              .from('organization_features')
+              .upsert(featureInserts as any, { onConflict: 'organization_id,feature_key' });
+
+            if (featuresError) throw featuresError;
           }
-        });
-        if (error) throw error;
-        if (!data?.success) {
-          throw new Error('Organization creation failed');
+          
+          // Update user's current organization
+          await supabase
+            .from('profiles')
+            .update({ current_organization_id: org.id })
+            .eq('id', user.id);
+            
+        } else {
+          // Use Edge function for web
+          const { data, error } = await supabase.functions.invoke('create-org-free', {
+            body: {
+              name: formData.name,
+              slug: formData.slug,
+              description: formData.description,
+              orgType: formData.orgType,
+              primaryColor: formData.primaryColor,
+              logoUrl: formData.logoUrl,
+              tagline: formData.tagline,
+              selectedFeatures: formData.selectedFeatures,
+              plan: tier,
+            }
+          });
+          if (error) throw error;
+          if (!data?.success) {
+            throw new Error('Organization creation failed');
+          }
         }
         toast({ title: 'Organization Created!', description: `Welcome to ${formData.name}.` });
         await refreshOrganization();
@@ -243,27 +309,171 @@ export const OrganizationOnboarding: React.FC = () => {
       }
 
       if (selectedPlan === 'basic' || selectedPlan === 'pro') {
-        const origin = window.location.origin;
-        const successUrl = `${origin}/organization/new?org_payment=success&session_id={CHECKOUT_SESSION_ID}`;
-        const cancelUrl = `${origin}/organization/new?org_payment=cancel`;
-        const { data, error } = await supabase.functions.invoke('create-org-subscription', {
-          body: {
-            plan: selectedPlan,
-            billingCycle: 'monthly',
-            orgName: formData.name,
-            slug: formData.slug,
-            successUrl,
-            cancelUrl,
+        // Check if we're in Capacitor environment
+        const isCapacitor = window.location.protocol === 'capacitor:';
+        
+        if (isCapacitor) {
+          // For Capacitor, create as free plan (payment can be handled separately)
+          // Create organization with selected tier but as "trial" status
+          const { data: org, error: orgError } = await supabase
+            .from('organizations')
+            .insert({
+              name: formData.name,
+              slug: formData.slug,
+              description: formData.description,
+              subscription_tier: selectedPlan, // Store intended tier
+              subscription_status: 'trial', // Start as trial until payment
+            })
+            .select()
+            .single();
+          
+          if (orgError) throw orgError;
+          
+          // Add user as owner
+          const { error: memberError } = await supabase
+            .from('organization_members')
+            .insert({
+              organization_id: org.id,
+              user_id: user.id,
+              role: 'owner',
+            });
+          
+          if (memberError) throw memberError;
+          
+          // Create theme
+          const { error: themeError } = await supabase
+            .from('organization_themes')
+            .insert({
+              organization_id: org.id,
+              primary_color: formData.primaryColor,
+            });
+          
+          if (themeError) throw themeError;
+          
+          // Add selected features
+          if (formData.selectedFeatures.length > 0) {
+            const featureInserts = formData.selectedFeatures.map((featureKey) => ({
+              organization_id: org.id,
+              feature_key: featureKey,
+              enabled: true,
+            }));
+
+            const { error: featuresError } = await supabase
+              .from('organization_features')
+              .upsert(featureInserts as any, { onConflict: 'organization_id,feature_key' });
+
+            if (featuresError) throw featuresError;
           }
-        });
-        if (error) throw error;
-        if (data?.url) {
-          window.location.href = data.url as string;
-          return;
+          
+          // Update user's current organization
+          await supabase
+            .from('profiles')
+            .update({ current_organization_id: org.id })
+            .eq('id', user.id);
+          
+          toast({ 
+            title: 'Organization Created!', 
+            description: `Welcome to ${formData.name}. You can upgrade your plan in settings.` 
+          });
+        } else {
+          // Use Edge function for web
+          const origin = window.location.origin;
+          const successUrl = `${origin}/organization/new?org_payment=success&session_id={CHECKOUT_SESSION_ID}`;
+          const cancelUrl = `${origin}/organization/new?org_payment=cancel`;
+          const { data, error } = await supabase.functions.invoke('create-org-subscription', {
+            body: {
+              plan: selectedPlan,
+              billingCycle: 'monthly',
+              orgName: formData.name,
+              slug: formData.slug,
+              successUrl,
+              cancelUrl,
+            }
+          });
+          if (error) throw error;
+          if (data?.url) {
+            window.location.href = data.url as string;
+            return;
+          }
+          throw new Error('Failed to create checkout session');
         }
-        throw new Error('Failed to create checkout session');
+        
+        await refreshOrganization();
+        setTimeout(() => navigate('/dashboard'), 1000);
+        return;
       }
 
+      // Enterprise plan
+      if (selectedPlan === 'enterprise') {
+        const isCapacitor = window.location.protocol === 'capacitor:';
+        
+        // Create organization directly for enterprise
+        const { data: org, error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            name: formData.name,
+            slug: formData.slug,
+            description: formData.description,
+            subscription_tier: 'enterprise',
+            subscription_status: 'active', // Enterprise is always active
+          })
+          .select()
+          .single();
+        
+        if (orgError) throw orgError;
+        
+        // Add user as owner
+        const { error: memberError } = await supabase
+          .from('organization_members')
+          .insert({
+            organization_id: org.id,
+            user_id: user.id,
+            role: 'owner',
+          });
+        
+        if (memberError) throw memberError;
+        
+        // Create theme
+        const { error: themeError } = await supabase
+          .from('organization_themes')
+          .insert({
+            organization_id: org.id,
+            primary_color: formData.primaryColor,
+          });
+        
+        if (themeError) throw themeError;
+        
+        // Add all features for enterprise
+        if (formData.selectedFeatures.length > 0) {
+          const featureInserts = formData.selectedFeatures.map((featureKey) => ({
+            organization_id: org.id,
+            feature_key: featureKey,
+            enabled: true,
+          }));
+
+          const { error: featuresError } = await supabase
+            .from('organization_features')
+            .upsert(featureInserts as any, { onConflict: 'organization_id,feature_key' });
+
+          if (featuresError) throw featuresError;
+        }
+        
+        // Update user's current organization
+        await supabase
+          .from('profiles')
+          .update({ current_organization_id: org.id })
+          .eq('id', user.id);
+        
+        toast({ 
+          title: 'Organization Created!', 
+          description: `Welcome to ${formData.name} - Enterprise Edition!` 
+        });
+        
+        await refreshOrganization();
+        setTimeout(() => navigate('/dashboard'), 1000);
+        return;
+      }
+      
       throw new Error('Unsupported plan');
 
     } catch (error) {

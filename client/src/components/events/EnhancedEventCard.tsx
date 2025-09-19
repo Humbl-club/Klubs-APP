@@ -110,6 +110,13 @@ export const EnhancedEventCard = memo(({
     return 'Free';
   }, [event.loyalty_points_price, event.price_cents]);
 
+  const dateChip = useMemo(() => {
+    const d = new Date(event.start_time);
+    const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+    const date = d.getDate();
+    return `${day} ${date}`;
+  }, [event.start_time]);
+
   const capacityPct = useMemo(() => {
     if (typeof event.capacityPercentage === 'number') return event.capacityPercentage;
     if (event.max_capacity && typeof event.current_capacity === 'number') {
@@ -283,37 +290,11 @@ export const EnhancedEventCard = memo(({
           </Badge>
         </div>
 
-        <div className="absolute top-2 left-2 flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSave();
-            }}
-            disabled={isSaving}
-            className="h-8 w-8 p-0 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-          >
-            <Heart 
-              className={cn(
-                'h-4 w-4 transition-colors',
-                event.isSaved ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
-              )} 
-            />
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShare();
-            }}
-            disabled={isSharing}
-            className="h-8 w-8 p-0 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-          >
-            <Share2 className="h-4 w-4 text-muted-foreground" />
-          </Button>
+        {/* Date Chip */}
+        <div className="absolute top-2 left-2">
+          <div className="px-2 py-1 rounded-md bg-background/85 backdrop-blur text-xs font-medium border border-border/60 shadow-sm">
+            {dateChip}
+          </div>
         </div>
 
         {/* Category Tags */}

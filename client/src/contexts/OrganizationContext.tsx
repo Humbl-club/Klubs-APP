@@ -215,7 +215,7 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
     
     try {
       const { data, error } = await supabase
-        .from('organization_layout')
+        .from('organization_layouts')
         .select('*')
         .eq('organization_id', currentOrganization.id)
         .single();

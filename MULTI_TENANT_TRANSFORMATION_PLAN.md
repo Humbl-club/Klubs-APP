@@ -15,7 +15,7 @@ Transform the current single-club Humbl Girls Club app into a **multi-tenant Saa
 - Multi-tenant platform (unlimited clubs)
 - Each club has isolated data
 - Modular feature selection per club
-- Native iOS app via Capacitor
+- iOS app via Capacitor
 - Subscription-based monetization
 
 ## Phase 1: Database Multi-Tenancy (2-3 weeks)

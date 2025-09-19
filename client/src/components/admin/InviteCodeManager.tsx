@@ -25,7 +25,8 @@ import {
   CheckCircle,
   Clock,
   UserPlus,
-  Link
+  Link,
+  RefreshCcw as RefreshIcon
 } from 'lucide-react';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { supabase } from '../../integrations/supabase/client';
@@ -131,6 +132,12 @@ export const InviteCodeManager: React.FC = () => {
 
       if (newInvite.expires_at) {
         inviteData.expires_at = new Date(newInvite.expires_at).toISOString();
+      } else {
+        // Apply org default auto-expiration if configured
+        const defaultDays = (currentOrganization?.settings as any)?.invites?.auto_expire_days || 0;
+        if (defaultDays > 0) {
+          inviteData.expires_at = new Date(Date.now() + defaultDays * 24 * 60 * 60 * 1000).toISOString();
+        }
       }
 
       const { error } = await supabase
@@ -192,6 +199,26 @@ export const InviteCodeManager: React.FC = () => {
       console.error('Failed to copy URL:', err);
       setError('Failed to copy URL to clipboard');
     }
+  };
+
+  const regenerateInviteCode = async (inviteId: string) => {
+    // Generate a random 8-char uppercase code; backend has unique constraint
+    const rnd = () => Math.random().toString(36).slice(2, 10).toUpperCase();
+    let attempts = 0;
+    while (attempts < 5) {
+      const newCode = rnd();
+      const { error } = await supabase
+        .from('invite_codes')
+        .update({ code: newCode })
+        .eq('id', inviteId);
+      if (!error) {
+        setSuccess('Invite code regenerated');
+        await loadInviteCodes();
+        return;
+      }
+      attempts++;
+    }
+    setError('Failed to regenerate invite code after several attempts');
   };
 
   const getTypeColor = (type: string) => {
@@ -528,6 +555,14 @@ export const InviteCodeManager: React.FC = () => {
                         >
                           <Copy className="w-4 h-4" />
                           {!isMobile && <span className="ml-1">Copy URL</span>}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => regenerateInviteCode(invite.id)}
+                        >
+                          <RefreshIcon />
+                          {!isMobile && <span className="ml-1">Regenerate</span>}
                         </Button>
                         
                         <Button

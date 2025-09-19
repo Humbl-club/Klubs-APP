@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx cap sync:*)",
+      "Bash(npx cap open:*)"
     ]
   },
   "outputStyle": "mobile-first-expert"

@@ -43,7 +43,7 @@ interface NavigationProps {
 
 export const Navigation: React.FC<NavigationProps> = ({ profile }) => {
   const { user, signOut, isAdmin, isSuperAdmin, isOrganizationAdmin } = useAuth();
-  const { currentOrganization } = useOrganization();
+  const { currentOrganization, isFeatureEnabled } = useOrganization();
   const location = useLocation();
   const { isMobile, isTablet, isDesktop } = useViewport();
   const haptics = useHapticFeedback();
@@ -56,17 +56,18 @@ export const Navigation: React.FC<NavigationProps> = ({ profile }) => {
     console.log('Navigation render state:', { isMobile, isTablet, isDesktop, width: window.innerWidth });
   }, [isMobile, isTablet, isDesktop]);
 
+  // Feature-gated navigation items
   const navItems = [
-    { href: '/dashboard', icon: Home, label: 'Home' },
-    { href: '/social', icon: Users, label: 'Community' },
-    { href: '/events', icon: Calendar, label: 'Events' },
-    { href: '/challenges', icon: Trophy, label: 'Wellness' },
-  ];
+    { href: '/dashboard', icon: Home, label: 'Home', feature: undefined },
+    { href: '/social', icon: Users, label: 'Community', feature: 'social' },
+    { href: '/events', icon: Calendar, label: 'Events', feature: 'events' },
+    { href: '/challenges', icon: Trophy, label: 'Wellness', feature: 'challenges' },
+  ].filter(item => !item.feature || isFeatureEnabled(item.feature));
 
   const secondaryNavItems = [
-    { href: '/messages', icon: MessageCircle, label: 'Messages' },
-    { href: '/my/registrations', icon: CheckCircle, label: 'My Events' },
-  ];
+    { href: '/messages', icon: MessageCircle, label: 'Messages', feature: 'messaging' },
+    { href: '/my/registrations', icon: CheckCircle, label: 'My Events', feature: undefined },
+  ].filter(item => !item.feature || isFeatureEnabled(item.feature));
 
   if (isAdmin) {
     secondaryNavItems.push({ href: '/admin', icon: Shield, label: 'Admin' });
@@ -83,23 +84,7 @@ export const Navigation: React.FC<NavigationProps> = ({ profile }) => {
   if (shouldRenderMobile) {
     return (
       <>
-        {/* Organization Switcher at Top */}
-        {currentOrganization ? (
-          <div className="fixed top-0 left-0 right-0 z-[9998] glass-nav border-b border-border/40 p-2">
-            <OrganizationSwitcher />
-          </div>
-        ) : (
-          <div className="fixed top-0 left-0 right-0 z-[9998] glass-nav border-b border-border/40 p-2">
-            <Link to="/organization/new">
-              <Button variant="outline" className="w-full">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your Organization
-              </Button>
-            </Link>
-          </div>
-        )}
-        
-        {/* Simple, highly visible mobile navigation */}
+        {/* Simple, highly visible mobile navigation - NO TOP BAR */}
         <nav className="fixed bottom-0 left-0 right-0 z-[9999] glass-nav border-t border-border/40 text-foreground">
           <div className="grid grid-cols-4 gap-0 px-2 py-3">
             {navItems.map(({ href, icon: Icon, label }) => (
